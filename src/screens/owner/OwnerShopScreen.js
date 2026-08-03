@@ -1,0 +1,355 @@
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { COLORS, FONTS, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
+import { shopAPI, serviceAPI, staffAPI } from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
+import Input from '../../components/Input';
+import Button from '../../components/Button';
+
+const OwnerShopScreen = () => {
+  const { logout } = useAuth();
+  const [shop, setShop]         = useState(null);
+  const [services, setServices] = useState([]);
+  const [staff, setStaff]       = useState([]);
+  const [loading, setLoading]   = useState(true);
+  const [tab, setTab]           = useState('services');
+
+  // New service form
+  const [newService, setNewService] = useState({ name: '', price: '', durationMin: '' });
+  const [addingService, setAddingService] = useState(false);
+  const [showServiceForm, setShowServiceForm] = useState(false);
+
+  // New staff form
+  const [newStaff, setNewStaff] = useState({ name: '', phone: '' });
+  const [addingStaff, setAddingStaff] = useState(false);
+  const [showStaffForm, setShowStaffForm] = useState(false);
+  const [editingStaffId, setEditingStaffId] = useState(null);
+  const [editingServiceId, setEditingServiceId] = useState(null);
+  
+  const [shopInfo, setShopInfo] = useState({ name: '', phone: '', address: '', category: 'unisex' });
+  const [savingShopInfo, setSavingShopInfo] = useState(false);
+
+  useEffect(() => { fetchData(); }, []);
+
+  const fetchData = async () => {
+    try {
+      const res = await shopAPI.getMyShop();
+      const shopData = res.data.data.shop;
+      setShop(shopData);
+      setServices(res.data.data.services);
+      setStaff(res.data.data.staff);
+      setShopInfo({
+        name: shopData.name,
+        phone: shopData.phone,
+        address: shopData.address,
+        category: shopData.category,
+      });
+    } catch (err) {
+      console.log('fetchData error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddService = async () => {
+      if (!newService.name || !newService.price || !newService.durationMin) {
+        return Alert.alert('Error', 'Please fill all fields');
+      }
+      setAddingService(true);
+      try {
+        if (editingServiceId) {
+          await serviceAPI.update(editingServiceId, {
+            name:        newService.name,
+            price:       Number(newService.price),
+            durationMin: Number(newService.durationMin),
+          });
+        } else {
+          await serviceAPI.add({
+            name:        newService.name,
+            price:       Number(newService.price),
+            durationMin: Number(newService.durationMin),
+          });
+        }
+        setNewService({ name: '', price: '', durationMin: '' });
+        setShowServiceForm(false);
+        setEditingServiceId(null);
+        fetchData();
+      } catch (err) {
+        Alert.alert('Error', editingServiceId ? 'Failed to update service' : 'Failed to add service');
+      } finally {
+        setAddingService(false);
+      }
+    };
+
+  const handleRemoveService = (id) => {
+    Alert.alert('Remove Service', 'Are you sure?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Remove', style: 'destructive', onPress: async () => {
+        await serviceAPI.remove(id);
+        fetchData();
+      }},
+    ]);
+   };
+
+  const handleEditService = (service) => {
+      setNewService({
+        name: service.name,
+        price: String(service.price),
+        durationMin: String(service.durationMin),
+      });
+      setEditingServiceId(service._id);
+      setShowServiceForm(true);
+  };
+
+  const handleAddStaff = async () => {
+    if (!newStaff.name) return Alert.alert('Error', 'Please enter staff name');
+    setAddingStaff(true);
+    try {
+      if (editingStaffId) {
+        await staffAPI.update(editingStaffId, { name: newStaff.name, phone: newStaff.phone });
+      } else {
+        await staffAPI.add({ name: newStaff.name, phone: newStaff.phone });
+      }
+      setNewStaff({ name: '', phone: '' });
+      setShowStaffForm(false);
+      setEditingStaffId(null);
+      fetchData();
+    } catch (err) {
+      Alert.alert('Error', editingStaffId ? 'Failed to update staff' : 'Failed to add staff');
+    } finally {
+      setAddingStaff(false);
+    }
+  };
+
+  const handleRemoveStaff = (id) => {
+    Alert.alert('Remove Staff', 'Are you sure?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Remove', style: 'destructive', onPress: async () => {
+        await staffAPI.remove(id);
+        fetchData();
+      }},
+    ]);
+  };
+
+  const handleEditStaff = (staffMember) => {
+    setNewStaff({ name: staffMember.name, phone: staffMember.phone || '' });
+    setEditingStaffId(staffMember._id);
+    setShowStaffForm(true);
+  };
+
+  const toggleAccepting = async () => {
+    try {
+      await shopAPI.update({ acceptingBookings: !shop.acceptingBookings });
+      fetchData();
+    } catch (err) {
+      Alert.alert('Error', 'Failed to update shop');
+    }
+  };
+
+  const handleSaveShopInfo = async () => {
+    if (!shopInfo.name.trim() || !shopInfo.phone.trim() || !shopInfo.address.trim()) {
+      return Alert.alert('Error', 'Please fill all fields');
+    }
+    setSavingShopInfo(true);
+    try {
+      await shopAPI.update(shopInfo);
+      fetchData();
+      Alert.alert('Success', 'Shop details updated');
+    } catch (err) {
+      Alert.alert('Error', 'Failed to update shop details');
+    } finally {
+      setSavingShopInfo(false);
+    }
+  };
+
+  if (loading) return (
+    <View style={styles.center}>
+      <ActivityIndicator color={COLORS.accent} size="large" />
+    </View>
+  );
+
+  return (
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.title}>Shop Settings</Text>
+        <TouchableOpacity onPress={() => Alert.alert('Logout', 'Are you sure?', [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Logout', style: 'destructive', onPress: logout }
+        ])}>
+          <Text style={styles.logoutText}>Logout</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Shop Status Toggle */}
+      <TouchableOpacity
+        style={[styles.statusBar, { borderColor: shop?.acceptingBookings ? COLORS.success : COLORS.error }]}
+        onPress={toggleAccepting}
+      >
+        <Text style={styles.statusBarText}>
+          {shop?.acceptingBookings ? '🟢  Accepting Bookings' : '🔴  Not Accepting Bookings'}
+        </Text>
+        <Text style={[styles.statusToggleText, { color: shop?.acceptingBookings ? COLORS.error : COLORS.success }]}>
+          {shop?.acceptingBookings ? 'Pause' : 'Resume'}
+        </Text>
+      </TouchableOpacity>
+
+      {/* Tabs */}
+      <View style={styles.tabRow}>
+        {['services', 'staff', 'info'].map(t => (
+          <TouchableOpacity
+            key={t}
+            style={[styles.tabBtn, tab === t && styles.tabBtnActive]}
+            onPress={() => setTab(t)}
+          >
+            <Text style={[styles.tabText, tab === t && styles.tabTextActive]}>
+              {t === 'services' ? '✂️  Services' : t === 'staff' ? '👥  Staff' : '🏪  Info'}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+
+        {/* Services Tab */}
+        {tab === 'services' && (
+          <>
+            {services.map(s => (
+              <View key={s._id} style={styles.itemCard}>
+                <View style={styles.itemLeft}>
+                  <Text style={styles.itemName}>{s.name}</Text>
+                  <Text style={styles.itemMeta}>⏱ {s.durationMin} mins  ·  ₹{s.price}</Text>
+                </View>
+                <TouchableOpacity onPress={() => handleEditService(s)} style={styles.editBtn}>
+                  <Text style={styles.editBtnText}>✎</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => handleRemoveService(s._id)} style={styles.removeBtn}>
+                  <Text style={styles.removeBtnText}>✕</Text>
+                </TouchableOpacity>
+              </View>
+            ))}
+
+            {showServiceForm ? (
+              <View style={styles.formCard}>
+                <Input label="Service Name"    value={newService.name}        onChangeText={t => setNewService({ ...newService, name: t })}        placeholder="e.g. Haircut" />
+                <Input label="Price (₹)"       value={newService.price}       onChangeText={t => setNewService({ ...newService, price: t })}       placeholder="e.g. 150" keyboardType="number-pad" />
+                <Input label="Duration (mins)" value={newService.durationMin} onChangeText={t => setNewService({ ...newService, durationMin: t })} placeholder="e.g. 30"  keyboardType="number-pad" />
+                <View style={{ flexDirection: 'row', gap: SPACING.sm }}>
+                  <Button title={editingServiceId ? 'Update' : 'Add'} onPress={handleAddService} loading={addingService} style={{ flex: 1 }} />
+                  <Button title="Cancel" onPress={() => { setShowServiceForm(false); setEditingServiceId(null); setNewService({ name: '', price: '', durationMin: '' }); }} variant="outline" style={{ flex: 1 }} />
+                </View>
+              </View>
+            ) : (
+              <TouchableOpacity style={styles.addBtn} onPress={() => { setEditingServiceId(null); setNewService({ name: '', price: '', durationMin: '' }); setShowServiceForm(true); }}>
+                <Text style={styles.addBtnText}>+ Add Service</Text>
+              </TouchableOpacity>
+            )}
+          </>
+        )}
+
+        {/* Staff Tab */}
+        {tab === 'staff' && (
+          <>
+            {staff.map(s => (
+              <View key={s._id} style={styles.itemCard}>
+                <View style={styles.staffAvatar}>
+                  <Text style={styles.staffAvatarText}>{s.name.charAt(0)}</Text>
+                </View>
+                <View style={styles.itemLeft}>
+                  <Text style={styles.itemName}>{s.name}</Text>
+                  <Text style={styles.itemMeta}>{s.phone || 'No phone'}</Text>
+                </View>
+                <TouchableOpacity onPress={() => handleEditStaff(s)} style={styles.editBtn}>
+                  <Text style={styles.editBtnText}>✎</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => handleRemoveStaff(s._id)} style={styles.removeBtn}>
+                  <Text style={styles.removeBtnText}>✕</Text>
+                </TouchableOpacity>
+              </View>
+            ))}
+
+            {showStaffForm ? (
+              <View style={styles.formCard}>
+                <Input label="Staff Name"  value={newStaff.name}  onChangeText={t => setNewStaff({ ...newStaff, name: t })}  placeholder="e.g. Rahul" />
+                <Input label="Phone"       value={newStaff.phone} onChangeText={t => setNewStaff({ ...newStaff, phone: t })} placeholder="10-digit number" keyboardType="phone-pad" />
+                <View style={{ flexDirection: 'row', gap: SPACING.sm }}>
+                  <Button title={editingStaffId ? 'Update' : 'Add'} onPress={handleAddStaff} loading={addingStaff} style={{ flex: 1 }} />
+                  <Button title="Cancel" onPress={() => { setShowStaffForm(false); setEditingStaffId(null); setNewStaff({ name: '', phone: '' }); }} variant="outline" style={{ flex: 1 }} />
+                </View>
+              </View>
+            ) : (
+              <TouchableOpacity style={styles.addBtn} onPress={() => { setEditingStaffId(null); setNewStaff({ name: '', phone: '' }); setShowStaffForm(true); }}>
+                <Text style={styles.addBtnText}>+ Add Staff</Text>
+              </TouchableOpacity>
+            )}
+          </>
+        )}
+
+        {/* Info Tab */}
+        {tab === 'info' && (
+          <View style={styles.formCard}>
+            <Input label="Shop Name" value={shopInfo.name} onChangeText={t => setShopInfo({ ...shopInfo, name: t })} placeholder="e.g. Harun Barber Shop" />
+            <Input label="Phone" value={shopInfo.phone} onChangeText={t => setShopInfo({ ...shopInfo, phone: t })} placeholder="10-digit number" keyboardType="phone-pad" />
+            <Input label="Address" value={shopInfo.address} onChangeText={t => setShopInfo({ ...shopInfo, address: t })} placeholder="Shop address" />
+
+            <Text style={[styles.itemMeta, { marginBottom: SPACING.xs, marginTop: 4 }]}>Category</Text>
+            <View style={{ flexDirection: 'row', gap: SPACING.sm, marginBottom: SPACING.lg }}>
+              {['men', 'women', 'unisex'].map(cat => (
+                <TouchableOpacity
+                  key={cat}
+                  style={[styles.tabBtn, { borderWidth: 1, borderColor: COLORS.border }, shopInfo.category === cat && styles.tabBtnActive]}
+                  onPress={() => setShopInfo({ ...shopInfo, category: cat })}
+                >
+                  <Text style={[styles.tabText, shopInfo.category === cat && styles.tabTextActive]}>
+                    {cat.charAt(0).toUpperCase() + cat.slice(1)}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <Button title="Save Changes" onPress={handleSaveShopInfo} loading={savingShopInfo} />
+          </View>
+        )}
+
+        <View style={{ height: 100 }} />
+      </ScrollView>
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: COLORS.background },
+  center:    { flex: 1, backgroundColor: COLORS.background, alignItems: 'center', justifyContent: 'center' },
+  header:    { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: SPACING.lg, paddingTop: SPACING.xl + 20, paddingBottom: SPACING.md },
+  title:     { fontSize: FONTS.sizes.xxl, fontWeight: '700', color: COLORS.white },
+  logoutText:{ color: COLORS.error, fontSize: FONTS.sizes.sm, fontWeight: '600' },
+
+  statusBar:        { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginHorizontal: SPACING.lg, marginBottom: SPACING.md, backgroundColor: COLORS.card, borderRadius: RADIUS.md, padding: SPACING.md, borderWidth: 1.5 },
+  statusBarText:    { color: COLORS.white, fontWeight: '600', fontSize: FONTS.sizes.sm },
+  statusToggleText: { fontWeight: '700', fontSize: FONTS.sizes.sm },
+
+  tabRow:        { flexDirection: 'row', marginHorizontal: SPACING.lg, backgroundColor: COLORS.card, borderRadius: RADIUS.md, padding: 4, marginBottom: SPACING.md },
+  tabBtn:        { flex: 1, paddingVertical: SPACING.sm, borderRadius: RADIUS.sm, alignItems: 'center' },
+  tabBtnActive:  { backgroundColor: COLORS.accent },
+  tabText:       { color: COLORS.textSecondary, fontWeight: '600', fontSize: FONTS.sizes.sm },
+  tabTextActive: { color: COLORS.white },
+
+  scroll: { paddingHorizontal: SPACING.lg },
+
+  itemCard:   { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.card, borderRadius: RADIUS.md, padding: SPACING.md, marginBottom: SPACING.sm, borderWidth: 1, borderColor: COLORS.border, gap: SPACING.sm },
+  itemLeft:   { flex: 1 },
+  itemName:   { color: COLORS.white, fontWeight: '600', fontSize: FONTS.sizes.md },
+  itemMeta:   { color: COLORS.textSecondary, fontSize: FONTS.sizes.xs, marginTop: 2 },
+  removeBtn:  { width: 32, height: 32, borderRadius: 16, backgroundColor: COLORS.error + '20', alignItems: 'center', justifyContent: 'center' },
+  removeBtnText: { color: COLORS.error, fontWeight: '700' },
+  editBtn:    { width: 32, height: 32, borderRadius: 16, backgroundColor: COLORS.accent + '20', alignItems: 'center', justifyContent: 'center', marginRight: SPACING.xs },
+  editBtnText:{ color: COLORS.accent, fontWeight: '700' },
+
+  staffAvatar:     { width: 40, height: 40, borderRadius: 20, backgroundColor: COLORS.accent, alignItems: 'center', justifyContent: 'center' },
+  staffAvatarText: { color: COLORS.white, fontWeight: '700', fontSize: FONTS.sizes.md },
+
+  formCard: { backgroundColor: COLORS.card, borderRadius: RADIUS.lg, padding: SPACING.md, marginBottom: SPACING.md, borderWidth: 1, borderColor: COLORS.border },
+  addBtn:   { borderWidth: 1.5, borderColor: COLORS.accent, borderStyle: 'dashed', borderRadius: RADIUS.md, padding: SPACING.md, alignItems: 'center', marginBottom: SPACING.md },
+  addBtnText: { color: COLORS.accent, fontWeight: '600', fontSize: FONTS.sizes.md },
+});
+
+export default OwnerShopScreen;
