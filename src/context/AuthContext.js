@@ -40,6 +40,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = async () => {
+    try { await authAPI.clearFcmToken(); } catch (err) { console.log('clearFcmToken error:', err); }
     await AsyncStorage.removeItem('token');
     await AsyncStorage.removeItem('user');
     setToken(null);

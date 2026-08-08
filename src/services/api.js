@@ -23,6 +23,7 @@ export const authAPI = {
   getMe:     () => api.get('/auth/me'),
   updateProfile: (name) => api.put('/auth/update-profile', { name }),
   updateFcmToken: (fcmToken) => api.put('/auth/update-fcm', { fcmToken }),
+  clearFcmToken: () => api.put('/auth/clear-fcm'),
 };
 
 export const shopAPI = {
