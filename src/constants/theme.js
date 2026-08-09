@@ -1,28 +1,33 @@
 export const COLORS = {
   // Primary
-  primary:        '#1A1A2E',   // Deep navy — main brand color
-  primaryLight:   '#16213E',
-  accent:         '#E94560',   // Bold red — buttons, highlights
-  accentLight:    '#FF6B6B',
+  primary:        '#1E1E20',   // Warm dark neutral — main brand color
+  primaryLight:   '#2A2A2E',
+  accent:         '#C87A63',   // Muted terracotta — buttons, highlights
+  accentLight:    '#DDA18F',
+  accentDark:     '#A85F49',   // Pressed/active states, ensures contrast
 
   // Backgrounds
-  background:     '#0F0F1A',   // Dark background
-  card:           '#1E1E30',   // Card background
-  cardLight:      '#252538',   // Slightly lighter card
+  background:     '#161618',   // Warm obsidian background
+  card:           '#202024',   // Card background
+  cardLight:      '#2A2A2E',   // Slightly lighter card
 
   // Text
-  textPrimary:    '#FFFFFF',
-  textSecondary:  '#A0A0B0',
+  textPrimary:    '#F2F2F2',
+  textSecondary:  '#94949C',
   textMuted:      '#606070',
 
   // Status
-  success:        '#00C896',
-  warning:        '#FFB020',
-  error:          '#FF4444',
+  success:        '#24B37F',
+  warning:        '#E6A94A',
+  error:          '#E25858',
+
+  // Category badges (used in HomeScreen/ShopDetailScreen)
+  categoryMen:    '#7898B0',
+  categoryWomen:  '#C4849B',
 
   // Others
-  border:         '#2A2A40',
-  inputBg:        '#1E1E30',
+  border:         '#2E2E32',
+  inputBg:        '#202024',
   overlay:        'rgba(0,0,0,0.7)',
   white:          '#FFFFFF',
   black:          '#000000',
@@ -76,7 +81,7 @@ export const SHADOWS = {
     elevation: 6,
   },
   large: {
-    shadowColor: '#E94560',
+    shadowColor: '#C87A63',   // updated from old accent #E94560
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 12,

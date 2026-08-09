@@ -32,7 +32,8 @@ const OwnerBookingsScreen = () => {
   };
 
   const updateStatus = async (bookingId, status) => {
-    const action = status === 'confirmed' ? 'Confirm' : status === 'completed' ? 'Complete' : 'Cancel';
+    const action = status === 'confirmed' ? 'Confirm' : status === 'completed' ? 'Complete' : status === 'no_show' ? 'Mark as No-Show' : 'Cancel';
+    
     Alert.alert(`${action} Booking`, `Are you sure?`, [
       { text: 'No', style: 'cancel' },
       {
@@ -59,7 +60,7 @@ const OwnerBookingsScreen = () => {
       style={[styles.actionBtn, { borderColor: color }]}
       onPress={onPress}
     >
-      <Text style={[styles.actionBtnText, { color }]}>{label}</Text>
+      <Text style={[styles.actionBtnText, { color }]} numberOfLines={1}>{label}</Text>
     </TouchableOpacity>
   );
 
@@ -80,14 +81,15 @@ const OwnerBookingsScreen = () => {
 
       <View style={styles.serviceRow}>
         <Text style={styles.serviceText}>✂️  {item.services?.map(s => s.name).join(' + ') || 'Service'}</Text>
-        <Text style={styles.priceText}>₹{item.amount}</Text>
-      </View>
-
-      {item.paymentStatus === 'paid' && (
-        <View style={styles.paidBadge}>
-          <Text style={styles.paidBadgeText}>✓ Paid Online</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          {item.paymentStatus === 'paid' && (
+            <View style={styles.paidBadge}>
+              <Text style={styles.paidBadgeText}>✓ Paid</Text>
+            </View>
+          )}
+          <Text style={styles.priceText}>₹{item.amount}</Text>
         </View>
-      )}
+      </View>
 
       {item.staffId && (
         <Text style={styles.staffText}>👤  {item.staffId?.name}</Text>
@@ -104,6 +106,7 @@ const OwnerBookingsScreen = () => {
         {item.status === 'confirmed' && (
           <>
             <ActionBtn label="✓ Complete" color={COLORS.accent}  onPress={() => updateStatus(item._id, 'completed')} />
+            <ActionBtn label="⚠ No-Show" color={COLORS.warning} onPress={() => updateStatus(item._id, 'no_show')} />
             <ActionBtn label="✕ Cancel"   color={COLORS.error}   onPress={() => updateStatus(item._id, 'cancelled')} />
           </>
         )}
@@ -185,7 +188,7 @@ const styles = StyleSheet.create({
   serviceText:  { color: COLORS.textSecondary, fontSize: FONTS.sizes.sm },
   priceText:    { color: COLORS.accent, fontWeight: '700', fontSize: FONTS.sizes.md },
   staffText:    { color: COLORS.textMuted, fontSize: FONTS.sizes.xs, marginTop: 4 },
-  paidBadge:     { alignSelf: 'flex-start', backgroundColor: COLORS.success + '20', borderRadius: RADIUS.full, paddingHorizontal: SPACING.sm, paddingVertical: 3, marginTop: 4 },
+  paidBadge:     { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.success + '20', borderRadius: RADIUS.full, paddingHorizontal: SPACING.sm, paddingVertical: 2, borderWidth: 1, borderColor: COLORS.success + '40' },
   paidBadgeText: { color: COLORS.success, fontSize: FONTS.sizes.xs, fontWeight: '700' },
 
   actions:        { flexDirection: 'row', gap: SPACING.sm, marginTop: SPACING.sm },

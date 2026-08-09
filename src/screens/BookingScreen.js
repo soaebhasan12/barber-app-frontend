@@ -169,14 +169,15 @@ const BookingScreen = () => {
             <Text style={styles.infoText}>
               {item.services?.map(s => s.name).join(' + ') || 'Service'}
             </Text>
-            <Text style={styles.infoPrice}>₹{item.amount}</Text>
-          </View>
-
-          {item.paymentStatus === 'paid' && (
-            <View style={styles.paidBadge}>
-              <Text style={styles.paidBadgeText}>✓ Paid Online</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              {item.paymentStatus === 'paid' && (
+                <View style={styles.paidBadge}>
+                  <Text style={styles.paidBadgeText}>✓ Paid</Text>
+                </View>
+              )}
+              <Text style={styles.infoPrice}>₹{item.amount}</Text>
             </View>
-          )}
+          </View>
 
           <View style={styles.infoRow}>
             <Text style={styles.infoIcon}>📅</Text>
@@ -354,7 +355,7 @@ const styles = StyleSheet.create({
   infoIcon:    { fontSize: 14 },
   infoText:    { color: COLORS.textSecondary, fontSize: FONTS.sizes.sm, flex: 1 },
   infoPrice:   { color: COLORS.accent, fontWeight: '700', fontSize: FONTS.sizes.sm },
-  paidBadge:     { alignSelf: 'flex-start', backgroundColor: COLORS.success + '20', borderRadius: RADIUS.full, paddingHorizontal: SPACING.sm, paddingVertical: 3, marginBottom: 6 },
+  paidBadge:     { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.success + '20', borderRadius: RADIUS.full, paddingHorizontal: SPACING.sm, paddingVertical: 2, borderWidth: 1, borderColor: COLORS.success + '40' },
   paidBadgeText: { color: COLORS.success, fontSize: FONTS.sizes.xs, fontWeight: '700' },
 
   emptyEmoji:   { fontSize: 48, marginBottom: SPACING.md },

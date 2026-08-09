@@ -264,10 +264,11 @@ const ShopDetailScreen = ({ route, navigation }) => {
 
         {selectedServices.length > 0 && (
           <TouchableOpacity
-            style={styles.selectedServiceBar}
+            style={styles.proceedBar}
             onPress={() => setTab('slots')}
+            activeOpacity={0.8}
           >
-            <View>
+            <View style={{ flex: 1 }}>
               <Text style={styles.selectedServiceText}>
                 {selectedServices.map(s => s.name).join(' + ')}
               </Text>
@@ -275,9 +276,12 @@ const ShopDetailScreen = ({ route, navigation }) => {
                 ⏱ {totalDuration} mins
               </Text>
             </View>
-            <Text style={styles.selectedServicePrice}>₹{totalPrice} →</Text>
+            <Text style={styles.selectedServicePrice}>₹{totalPrice}</Text>
+            <View style={styles.proceedArrow}>
+              <Text style={styles.proceedArrowText}>→</Text>
+            </View>
           </TouchableOpacity>
-        )}        
+        )}       
 
         {/* ── SLOTS TAB ── */}
         {tab === 'slots' && (
@@ -294,8 +298,8 @@ const ShopDetailScreen = ({ route, navigation }) => {
 
             {selectedStaff && (
               <View style={[styles.selectedServiceBar, { marginTop: 6 }]}>
-                <Text style={styles.selectedServiceText}>👤  {selectedStaff.name}</Text>
-                <Text style={styles.selectedServicePrice}>{selectedStaff.speciality?.join(', ')}</Text>
+                <Text style={styles.selectedServiceText} numberOfLines={1}>👤  {selectedStaff.name}</Text>
+                <Text style={styles.selectedServicePrice} numberOfLines={1}>{selectedStaff.speciality?.join(', ')}</Text>
               </View>
             )}
 
@@ -429,9 +433,12 @@ const styles = StyleSheet.create({
   staffNameActive:  { color: COLORS.accent },
   staffSpec:        { color: COLORS.textMuted, fontSize: 10, textAlign: 'center', marginTop: 2 },
 
-  selectedServiceBar:   { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: COLORS.accent + '15', borderRadius: RADIUS.md, padding: SPACING.md, marginBottom: SPACING.sm, borderWidth: 1, borderColor: COLORS.accent + '50',},
+  selectedServiceBar:   { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: COLORS.accent + '15', borderRadius: RADIUS.md, padding: SPACING.md, marginBottom: SPACING.sm, borderWidth: 1, borderColor: COLORS.accent + '50', width: '100%' },
   selectedServiceText:  { color: COLORS.white, fontWeight: '600', fontSize: FONTS.sizes.sm, flex: 1, },
   selectedServicePrice: { color: COLORS.accent, fontWeight: '700', fontSize: FONTS.sizes.md, },
+  proceedBar:        { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: COLORS.accent + '15', borderRadius: RADIUS.md, padding: SPACING.md, marginHorizontal: SPACING.lg, marginTop: SPACING.md, marginBottom: SPACING.sm, borderWidth: 1.5, borderColor: COLORS.accent, gap: SPACING.sm, ...SHADOWS.small },
+  proceedArrow:      { width: 28, height: 28, borderRadius: 14, backgroundColor: COLORS.accent, alignItems: 'center', justifyContent: 'center' },
+  proceedArrowText:  { color: COLORS.white, fontSize: 14, fontWeight: '700' },
 
   dateCard:       { width: 58, height: 70, borderRadius: RADIUS.md, backgroundColor: COLORS.card, borderWidth: 1.5, borderColor: COLORS.border, alignItems: 'center', justifyContent: 'center', marginRight: SPACING.sm },
   dateCardActive: { backgroundColor: COLORS.accent, borderColor: COLORS.accent },

@@ -46,8 +46,8 @@ const HomeScreen = ({ navigation }) => {
   };
 
   const getCategoryColor = (category) => {
-    if (category === 'men')    return '#4A90E2';
-    if (category === 'women')  return '#E91E8C';
+    if (category === 'men')    return COLORS.categoryMen;
+    if (category === 'women')  return COLORS.categoryWomen;
     return COLORS.accent;
   };
 
@@ -200,7 +200,7 @@ const styles = StyleSheet.create({
   searchPlaceholder: { color: COLORS.textMuted, fontSize: FONTS.sizes.md },
   searchInput: { flex: 1, color: COLORS.textPrimary, fontSize: FONTS.sizes.md },
 
-  filterScroll: { paddingLeft: SPACING.lg, marginBottom: SPACING.md },
+  filterScroll: { paddingLeft: SPACING.lg, paddingRight: SPACING.lg, marginBottom: SPACING.md, marginTop: SPACING.md },
   filterPill:   {
     paddingHorizontal: SPACING.md,
     paddingVertical:   SPACING.xs,
@@ -226,7 +226,7 @@ const styles = StyleSheet.create({
     borderWidth:     1,
     borderColor:     COLORS.border,
     overflow:        'hidden',
-    ...SHADOWS.small,
+    ...SHADOWS.medium,
   },
   shopImage: {
     height:         140,
