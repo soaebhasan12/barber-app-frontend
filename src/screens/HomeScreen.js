@@ -1,5 +1,6 @@
 import * as Location from 'expo-location';
 import React, { useState, useEffect } from 'react';
+import { Ionicons } from '@expo/vector-icons';
 import {
   View, Text, StyleSheet, ScrollView,
   TouchableOpacity, FlatList, ActivityIndicator, TextInput
@@ -68,9 +69,11 @@ const HomeScreen = ({ navigation }) => {
     >
       {/* Shop Image Placeholder */}
       <View style={[styles.shopImage, { backgroundColor: getCategoryColor(shop.category) + '30' }]}>
-        <Text style={styles.shopEmoji}>
-          {shop.category === 'men' ? '💈' : shop.category === 'women' ? '💅' : '✂️'}
-        </Text>
+        <Ionicons
+          name={shop.category === 'men' ? 'cut' : shop.category === 'women' ? 'sparkles' : 'cut'}
+          size={44}
+          color={getCategoryColor(shop.category)}
+        />
         <View style={[styles.categoryBadge, { backgroundColor: getCategoryColor(shop.category) }]}>
           <Text style={styles.categoryText}>{shop.category.toUpperCase()}</Text>
         </View>
@@ -81,7 +84,7 @@ const HomeScreen = ({ navigation }) => {
         <View style={styles.shopHeader}>
           <Text style={styles.shopName} numberOfLines={1}>{shop.name}</Text>
           <View style={styles.ratingRow}>
-            <Text style={styles.star}>★</Text>
+            <Ionicons name="star" size={13} color={COLORS.warning} />
             <Text style={styles.rating}>{shop.rating > 0 ? shop.rating : 'New'}</Text>
           </View>
         </View>
@@ -105,18 +108,18 @@ const HomeScreen = ({ navigation }) => {
 
         {/* Header */}
         <View style={styles.header}>
-          <View>
-            <Text style={styles.greeting}>Good {new Date().getHours() < 12 ? 'Morning' : new Date().getHours() < 17 ? 'Afternoon' : 'Evening'} 👋</Text>
-            <Text style={styles.userName}>{user?.name || 'Guest'}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+            <Text style={styles.greeting}>Good {new Date().getHours() < 12 ? 'Morning' : new Date().getHours() < 17 ? 'Afternoon' : 'Evening'}</Text>
+            <Ionicons name="hand-left-outline" size={13} color={COLORS.textSecondary} />
           </View>
           <TouchableOpacity style={styles.notifBtn}>
-            <Text style={styles.notifIcon}>🔔</Text>
+            <Ionicons name="notifications-outline" size={20} color={COLORS.white} /><Text style={styles.notifIcon}>🔔</Text>
           </TouchableOpacity>
         </View>
 
         {/* Search Bar */}
         <View style={styles.searchBar}>
-          <Text style={styles.searchIcon}>🔍</Text>
+          <Ionicons name="search-outline" size={18} color={COLORS.textMuted} />
           <TextInput
             style={styles.searchInput}
             placeholder="Search barber, salon..."
@@ -148,7 +151,7 @@ const HomeScreen = ({ navigation }) => {
             <ActivityIndicator color={COLORS.accent} style={{ marginTop: SPACING.xl }} />
           ) : shops.length === 0 ? (
             <View style={styles.emptyState}>
-              <Text style={styles.emptyEmoji}>✂️</Text>
+              <Ionicons name="cut-outline" size={48} color={COLORS.textMuted} />
               <Text style={styles.emptyText}>No shops found nearby</Text>
               <Text style={styles.emptySubtext}>Try expanding your search area</Text>
             </View>

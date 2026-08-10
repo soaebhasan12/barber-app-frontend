@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Ionicons } from '@expo/vector-icons';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { COLORS, FONTS, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
 import { shopAPI, serviceAPI, staffAPI } from '../../services/api';
@@ -85,11 +86,15 @@ const OwnerShopScreen = () => {
     Alert.alert('Remove Service', 'Are you sure?', [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Remove', style: 'destructive', onPress: async () => {
-        await serviceAPI.remove(id);
-        fetchData();
+        try {
+          await serviceAPI.remove(id);
+          fetchData();
+        } catch (err) {
+          Alert.alert('Error', 'Failed to remove service');
+        }
       }},
     ]);
-   };
+  };
 
   const handleEditService = (service) => {
       setNewService({
@@ -185,9 +190,16 @@ const OwnerShopScreen = () => {
         style={[styles.statusBar, { borderColor: shop?.acceptingBookings ? COLORS.success : COLORS.error }]}
         onPress={toggleAccepting}
       >
-        <Text style={styles.statusBarText}>
-          {shop?.acceptingBookings ? '🟢  Accepting Bookings' : '🔴  Not Accepting Bookings'}
-        </Text>
+        <View style={styles.iconTextRow}>
+          <Ionicons
+            name={shop?.acceptingBookings ? 'checkmark-circle' : 'close-circle'}
+            size={16}
+            color={shop?.acceptingBookings ? COLORS.success : COLORS.error}
+          />
+          <Text style={styles.statusBarText}>
+            {shop?.acceptingBookings ? 'Accepting Bookings' : 'Not Accepting Bookings'}
+          </Text>
+        </View>
         <Text style={[styles.statusToggleText, { color: shop?.acceptingBookings ? COLORS.error : COLORS.success }]}>
           {shop?.acceptingBookings ? 'Pause' : 'Resume'}
         </Text>
@@ -201,9 +213,16 @@ const OwnerShopScreen = () => {
             style={[styles.tabBtn, tab === t && styles.tabBtnActive]}
             onPress={() => setTab(t)}
           >
-            <Text style={[styles.tabText, tab === t && styles.tabTextActive]}>
-              {t === 'services' ? '✂️  Services' : t === 'staff' ? '👥  Staff' : '🏪  Info'}
-            </Text>
+            <View style={styles.iconTextRow}>
+              <Ionicons
+                name={t === 'services' ? 'cut-outline' : t === 'staff' ? 'people-outline' : 'storefront-outline'}
+                size={14}
+                color={tab === t ? COLORS.white : COLORS.textSecondary}
+              />
+              <Text style={[styles.tabText, tab === t && styles.tabTextActive]}>
+                {t === 'services' ? 'Services' : t === 'staff' ? 'Staff' : 'Info'}
+              </Text>
+            </View>
           </TouchableOpacity>
         ))}
       </View>
@@ -217,13 +236,16 @@ const OwnerShopScreen = () => {
               <View key={s._id} style={styles.itemCard}>
                 <View style={styles.itemLeft}>
                   <Text style={styles.itemName}>{s.name}</Text>
-                  <Text style={styles.itemMeta}>⏱ {s.durationMin} mins  ·  ₹{s.price}</Text>
+                  <View style={styles.iconTextRow}>
+                    <Ionicons name="time-outline" size={12} color={COLORS.textSecondary} />
+                    <Text style={styles.itemMeta}>{s.durationMin} mins  ·  ₹{s.price}</Text>
+                  </View>
                 </View>
                 <TouchableOpacity onPress={() => handleEditService(s)} style={styles.editBtn}>
-                  <Text style={styles.editBtnText}>✎</Text>
+                  <Ionicons name="pencil" size={14} color={COLORS.accent} />
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => handleRemoveService(s._id)} style={styles.removeBtn}>
-                  <Text style={styles.removeBtnText}>✕</Text>
+                  <Ionicons name="close" size={16} color={COLORS.error} />
                 </TouchableOpacity>
               </View>
             ))}
@@ -259,10 +281,10 @@ const OwnerShopScreen = () => {
                   <Text style={styles.itemMeta}>{s.phone || 'No phone'}</Text>
                 </View>
                 <TouchableOpacity onPress={() => handleEditStaff(s)} style={styles.editBtn}>
-                  <Text style={styles.editBtnText}>✎</Text>
+                  <Ionicons name="pencil" size={14} color={COLORS.accent} />
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => handleRemoveStaff(s._id)} style={styles.removeBtn}>
-                  <Text style={styles.removeBtnText}>✕</Text>
+                  <Ionicons name="close" size={16} color={COLORS.error} />
                 </TouchableOpacity>
               </View>
             ))}
@@ -339,6 +361,7 @@ const styles = StyleSheet.create({
   itemLeft:   { flex: 1 },
   itemName:   { color: COLORS.white, fontWeight: '600', fontSize: FONTS.sizes.md },
   itemMeta:   { color: COLORS.textSecondary, fontSize: FONTS.sizes.xs, marginTop: 2 },
+  iconTextRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   removeBtn:  { width: 32, height: 32, borderRadius: 16, backgroundColor: COLORS.error + '20', alignItems: 'center', justifyContent: 'center' },
   removeBtnText: { color: COLORS.error, fontWeight: '700' },
   editBtn:    { width: 32, height: 32, borderRadius: 16, backgroundColor: COLORS.accent + '20', alignItems: 'center', justifyContent: 'center', marginRight: SPACING.xs },

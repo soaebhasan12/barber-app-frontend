@@ -3,9 +3,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { Ionicons } from '@expo/vector-icons';
 import { View, Text } from 'react-native';
 import { useAuth } from '../context/AuthContext';
-import { COLORS } from '../constants/theme';
+import { COLORS, RADIUS } from '../constants/theme';
 
 // Screens — abhi placeholder, baad mein replace karenge
 import LoginScreen    from '../screens/LoginScreen';
@@ -20,9 +21,26 @@ import OwnerShopScreen      from '../screens/owner/OwnerShopScreen';
 const Stack = createStackNavigator();
 const Tab   = createBottomTabNavigator();
 
-const TabIcon = ({ emoji, focused }) => (
-  <Text style={{ fontSize: 22, opacity: focused ? 1 : 0.5 }}>{emoji}</Text>
+const TabIcon = ({ name, label, focused }) => (
+  <View style={tabIconStyles.container}>
+    <View style={[tabIconStyles.wrap, focused && tabIconStyles.wrapActive]}>
+      <Ionicons name={name} size={20} color={focused ? COLORS.accent : COLORS.textMuted} />
+    </View>
+    <Text style={[tabIconStyles.label, focused && tabIconStyles.labelActive]} numberOfLines={1}>
+      {label}
+    </Text>
+  </View>
 );
+
+const tabIconStyles = {
+  container:  { alignItems: 'center', justifyContent: 'center', width: 64 },
+  wrap:       { width: 40, height: 30, borderRadius: RADIUS.md, alignItems: 'center', justifyContent: 'center' },
+  wrapActive: { backgroundColor: COLORS.accent + '20' },
+  label:      { fontSize: 10, fontWeight: '600', color: COLORS.textMuted, marginTop: 2 },
+  labelActive:{ color: COLORS.accent },
+};
+
+
 
 const UserTabs = () => {
   const insets = useSafeAreaInsets();
@@ -30,37 +48,39 @@ const UserTabs = () => {
     <Tab.Navigator screenOptions={{
       headerShown: false,
       tabBarStyle: {
+        position: 'absolute',
+        left: 16,
+        right: 16,
+        bottom: insets.bottom + 12,
         backgroundColor: COLORS.card,
-        borderTopColor: COLORS.border,
-        borderTopWidth: 1,
-        height: 60 + insets.bottom,
-        paddingBottom: insets.bottom + 8,
-        paddingTop: 8,
+        borderRadius: RADIUS.xl,
+        borderWidth: 1,
+        borderColor: COLORS.border,
+        height: 72,
+        paddingTop: 18,
+        elevation: 12,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.3,
+        shadowRadius: 12,
       },
-      tabBarShowLabel: true,
-      tabBarLabelStyle: {
-        fontSize: 11,
-        fontWeight: '600',
-        marginTop: 2,
-      },
+      // tabBarShowLabel: true,
+      // tabBarLabelStyle: {
+      //   fontSize: 11,
+      //   fontWeight: '600',
+      //   marginTop: 2,
+      // },
+      tabBarShowLabel: false,
+      tabBarItemStyle: { flex: 1, height: 64 },
       tabBarActiveTintColor: COLORS.accent,
       tabBarInactiveTintColor: COLORS.textMuted,
     }}>
       <Tab.Screen name="Home" component={HomeScreen}
-        options={{
-          tabBarLabel: 'Home',
-          tabBarIcon: ({ focused }) => <TabIcon emoji="✂️" focused={focused} />,
-        }} />
+        options={{ tabBarIcon: ({ focused }) => <TabIcon name={focused ? 'cut' : 'cut-outline'} label="Home" focused={focused} /> }} />
       <Tab.Screen name="Bookings" component={BookingScreen}
-        options={{
-          tabBarLabel: 'Bookings',
-          tabBarIcon: ({ focused }) => <TabIcon emoji="📅" focused={focused} />,
-        }} />
+        options={{ tabBarIcon: ({ focused }) => <TabIcon name={focused ? 'calendar' : 'calendar-outline'} label="Bookings" focused={focused} /> }} />
       <Tab.Screen name="Profile" component={ProfileScreen}
-        options={{
-          tabBarLabel: 'Profile',
-          tabBarIcon: ({ focused }) => <TabIcon emoji="👤" focused={focused} />,
-        }} />
+        options={{ tabBarIcon: ({ focused }) => <TabIcon name={focused ? 'person' : 'person-outline'} label="Profile" focused={focused} /> }} />
     </Tab.Navigator>
   );
 };
@@ -71,42 +91,35 @@ const OwnerTabs = () => {
     <Tab.Navigator screenOptions={{
       headerShown: false,
       tabBarStyle: {
+        position: 'absolute',
+        left: 16,
+        right: 16,
+        bottom: insets.bottom + 12,
         backgroundColor: COLORS.card,
-        borderTopColor: COLORS.border,
-        borderTopWidth: 1,
-        height: 60 + insets.bottom,
-        paddingBottom: insets.bottom + 8,
-        paddingTop: 8,
+        borderRadius: RADIUS.xl,
+        borderWidth: 1,
+        borderColor: COLORS.border,
+        height: 72,
+        paddingTop: 18,
+        elevation: 12,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.3,
+        shadowRadius: 12,
       },
-      tabBarShowLabel: true,
-      tabBarLabelStyle: {
-        fontSize: 11,
-        fontWeight: '600',
-        marginTop: 2,
-      },
+      tabBarShowLabel: false,
+      tabBarItemStyle: { flex: 1, height: 64 },
       tabBarActiveTintColor: COLORS.accent,
       tabBarInactiveTintColor: COLORS.textMuted,
     }}>
       <Tab.Screen name="OwnerDashboard" component={OwnerDashboardScreen}
-        options={{
-          tabBarLabel: 'Dashboard',
-          tabBarIcon: ({ focused }) => <TabIcon emoji="📊" focused={focused} />,
-        }} />
+        options={{ tabBarIcon: ({ focused }) => <TabIcon name={focused ? 'stats-chart' : 'stats-chart-outline'} label="Dashboard" focused={focused} /> }} />
       <Tab.Screen name="OwnerBookings" component={OwnerBookingsScreen}
-        options={{
-          tabBarLabel: 'Bookings',
-          tabBarIcon: ({ focused }) => <TabIcon emoji="📅" focused={focused} />,
-        }} />
+        options={{ tabBarIcon: ({ focused }) => <TabIcon name={focused ? 'calendar' : 'calendar-outline'} label="Bookings" focused={focused} /> }} />
       <Tab.Screen name="OwnerShop" component={OwnerShopScreen}
-        options={{
-          tabBarLabel: 'Shop',
-          tabBarIcon: ({ focused }) => <TabIcon emoji="⚙️" focused={focused} />,
-        }} />
+        options={{ tabBarIcon: ({ focused }) => <TabIcon name={focused ? 'storefront' : 'storefront-outline'} label="Shop" focused={focused} /> }} />
       <Tab.Screen name="OwnerProfile" component={ProfileScreen}
-        options={{
-          tabBarLabel: 'Profile',
-          tabBarIcon: ({ focused }) => <TabIcon emoji="👤" focused={focused} />,
-        }} />
+        options={{ tabBarIcon: ({ focused }) => <TabIcon name={focused ? 'person' : 'person-outline'} label="Profile" focused={focused} /> }} />
     </Tab.Navigator>
   );
 };
@@ -116,7 +129,7 @@ const AppNavigator = () => {
 
   if (loading) return (
     <View style={{ flex: 1, backgroundColor: COLORS.background, alignItems: 'center', justifyContent: 'center' }}>
-      <Text style={{ color: COLORS.accent, fontSize: 24 }}>✂️</Text>
+      <Ionicons name="cut" size={40} color={COLORS.accent} />
     </View>
   );
 

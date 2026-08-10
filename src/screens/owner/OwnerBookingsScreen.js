@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import { useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert, ScrollView } from 'react-native';
 import { COLORS, FONTS, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
@@ -60,15 +61,6 @@ const OwnerBookingsScreen = () => {
     return acc;
   }, {});
 
-  // const ActionBtn = ({ label, color, onPress }) => (
-  //   <TouchableOpacity
-  //     style={[styles.actionBtn, { borderColor: color }]}
-  //     onPress={onPress}
-  //   >
-  //     <Text style={[styles.actionBtnText, { color }]} numberOfLines={1}>{label}</Text>
-  //   </TouchableOpacity>
-  // );
-
   const BookingCard = ({ item }) => {
     const isToday = item.slotDate === new Date().toISOString().split('T')[0];
     return (
@@ -80,7 +72,10 @@ const OwnerBookingsScreen = () => {
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.customerName} numberOfLines={1}>{item.userId?.name || 'Customer'}</Text>
-              <Text style={styles.customerPhone}>📱 {item.userId?.phone}</Text>
+              <View style={styles.iconTextRow}>
+                <Ionicons name="call-outline" size={11} color={COLORS.textSecondary} />
+                <Text style={styles.customerPhone}>{item.userId?.phone}</Text>
+              </View>
             </View>
           </View>
           <View style={[styles.timeBox, isToday && styles.timeBoxToday]}>
@@ -93,23 +88,35 @@ const OwnerBookingsScreen = () => {
         <View style={styles.divider} />
 
         <View style={styles.serviceRow}>
-          <Text style={styles.serviceText} numberOfLines={1}>✂️  {item.services?.map(s => s.name).join(' + ') || 'Service'}</Text>
+          <View style={[styles.iconTextRow, { flex: 1 }]}>
+            <Ionicons name="cut-outline" size={14} color={COLORS.textSecondary} />
+            <Text style={styles.serviceText} numberOfLines={1}>
+              {item.services?.map(s => s.name).join(' + ') || 'Service'}
+            </Text>
+          </View>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
             {item.paymentStatus === 'paid' && (
               <View style={styles.paidBadge}>
-                <Text style={styles.paidBadgeText}>✓ Paid</Text>
+                <Ionicons name="checkmark" size={11} color={COLORS.success} />
+                <Text style={styles.paidBadgeText}>Paid</Text>
               </View>
             )}
             <Text style={styles.priceText}>₹{item.amount}</Text>
           </View>
         </View>
 
-        {item.staffId && <Text style={styles.staffText}>👤  {item.staffId?.name}</Text>}
+        {item.staffId && (
+          <View style={styles.iconTextRow}>
+            <Ionicons name="person-outline" size={12} color={COLORS.textMuted} />
+            <Text style={styles.staffText}>{item.staffId?.name}</Text>
+          </View>
+        )}
 
         {item.status === 'pending' && (
           <View style={styles.actionsWrap}>
             <TouchableOpacity style={styles.primaryBtn} onPress={() => updateStatus(item._id, 'confirmed')} activeOpacity={0.85}>
-              <Text style={styles.primaryBtnText}>✓ Accept Booking</Text>
+              <Ionicons name="checkmark-circle" size={16} color={COLORS.white} />
+              <Text style={styles.primaryBtnText}>Accept Booking</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.declineLink} onPress={() => updateStatus(item._id, 'cancelled')}>
               <Text style={styles.declineLinkText}>Decline</Text>
@@ -120,24 +127,34 @@ const OwnerBookingsScreen = () => {
         {item.status === 'confirmed' && (
           <View style={styles.actionsWrap}>
             <TouchableOpacity style={[styles.primaryBtn, { backgroundColor: COLORS.success }]} onPress={() => updateStatus(item._id, 'completed')} activeOpacity={0.85}>
-              <Text style={styles.primaryBtnText}>✓ Mark Complete</Text>
+              <Ionicons name="checkmark-circle" size={16} color={COLORS.white} />
+              <Text style={styles.primaryBtnText}>Mark Complete</Text>
             </TouchableOpacity>
             <View style={styles.secondaryRow}>
-              <TouchableOpacity onPress={() => updateStatus(item._id, 'no_show')}>
-                <Text style={styles.secondaryLinkWarn}>⚠ No-Show</Text>
+              <TouchableOpacity style={styles.iconTextRow} onPress={() => updateStatus(item._id, 'no_show')}>
+                <Ionicons name="warning-outline" size={13} color={COLORS.warning} />
+                <Text style={styles.secondaryLinkWarn}>No-Show</Text>
               </TouchableOpacity>
               <Text style={styles.secondaryDot}>•</Text>
-              <TouchableOpacity onPress={() => updateStatus(item._id, 'cancelled')}>
-                <Text style={styles.secondaryLinkError}>✕ Cancel</Text>
+              <TouchableOpacity style={styles.iconTextRow} onPress={() => updateStatus(item._id, 'cancelled')}>
+                <Ionicons name="close-circle-outline" size={13} color={COLORS.error} />
+                <Text style={styles.secondaryLinkError}>Cancel</Text>
               </TouchableOpacity>
             </View>
           </View>
         )}
 
         {(item.status === 'completed' || item.status === 'cancelled' || item.status === 'no_show') && (
-          <Text style={[styles.finalStatus, { color: item.status === 'completed' ? COLORS.success : item.status === 'no_show' ? COLORS.warning : COLORS.error }]}>
-            {item.status === 'completed' ? '✓ Completed' : item.status === 'no_show' ? '⚠ No-Show' : '✕ Cancelled'}
-          </Text>
+          <View style={styles.iconTextRow}>
+            <Ionicons
+              name={item.status === 'completed' ? 'checkmark-circle' : item.status === 'no_show' ? 'warning' : 'close-circle'}
+              size={14}
+              color={item.status === 'completed' ? COLORS.success : item.status === 'no_show' ? COLORS.warning : COLORS.error}
+            />
+            <Text style={[styles.finalStatus, { color: item.status === 'completed' ? COLORS.success : item.status === 'no_show' ? COLORS.warning : COLORS.error }]}>
+              {item.status === 'completed' ? 'Completed' : item.status === 'no_show' ? 'No-Show' : 'Cancelled'}
+            </Text>
+          </View>
         )}
       </View>
     );
@@ -176,7 +193,7 @@ const OwnerBookingsScreen = () => {
         </View>
       ) : filtered.length === 0 ? (
         <View style={styles.center}>
-          <Text style={styles.emptyEmoji}>📅</Text>
+          <Ionicons name="calendar-outline" size={48} color={COLORS.textMuted} />
           <Text style={styles.emptyText}>No {filter} bookings</Text>
         </View>
       ) : (
@@ -213,6 +230,7 @@ const styles = StyleSheet.create({
   card:         { backgroundColor: COLORS.card, borderRadius: RADIUS.lg, padding: SPACING.md, marginBottom: SPACING.md, borderWidth: 1, borderColor: COLORS.border, ...SHADOWS.small },
   cardTop:      { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   customerRow:  { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, flex: 1, marginRight: SPACING.sm },
+  iconTextRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   avatar:       { width: 40, height: 40, borderRadius: 20, backgroundColor: COLORS.accent + '25', alignItems: 'center', justifyContent: 'center' },
   avatarText:   { color: COLORS.accent, fontWeight: '700', fontSize: FONTS.sizes.md },
 
@@ -229,12 +247,11 @@ const styles = StyleSheet.create({
   serviceText:  { color: COLORS.textSecondary, fontSize: FONTS.sizes.sm },
   priceText:    { color: COLORS.accent, fontWeight: '700', fontSize: FONTS.sizes.md },
   staffText:    { color: COLORS.textMuted, fontSize: FONTS.sizes.xs, marginTop: 4 },
-  paidBadge:    { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.success + '20', borderRadius: RADIUS.full,       
-                  paddingHorizontal: SPACING.sm, paddingVertical: 2, borderWidth: 1, borderColor: COLORS.success + '40' },
+  paidBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: COLORS.success + '20', borderRadius: RADIUS.full, paddingHorizontal: SPACING.sm, paddingVertical: 2, borderWidth: 1, borderColor: COLORS.success + '40' },
   paidBadgeText: { color: COLORS.success, fontSize: FONTS.sizes.xs, fontWeight: '700' },
 
   actionsWrap:  { marginTop: SPACING.sm, gap: SPACING.xs },
-  primaryBtn:   { backgroundColor: COLORS.accent, borderRadius: RADIUS.md, paddingVertical: SPACING.sm, alignItems: 'center' },
+  primaryBtn:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: COLORS.accent, borderRadius: RADIUS.md, paddingVertical: SPACING.sm },
   primaryBtnText:{ color: COLORS.white, fontWeight: '700', fontSize: FONTS.sizes.sm },
   declineLink:      { alignItems: 'center', paddingVertical: 4 },
   declineLinkText:  { color: COLORS.textMuted, fontSize: FONTS.sizes.xs, fontWeight: '600' },

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Ionicons } from '@expo/vector-icons';
 import {
   View, Text, StyleSheet, ScrollView,
   TouchableOpacity, ActivityIndicator, Alert,
@@ -79,7 +80,7 @@ const ShopDetailScreen = ({ route, navigation }) => {
       const newBooking = res.data.data;
 
       Alert.alert(
-        'Booking Confirmed! ✅',
+        'Booking Confirmed!',
         'How would you like to pay?',
         [
           { text: 'Pay at Shop', onPress: () => navigation.goBack() },
@@ -118,7 +119,7 @@ const ShopDetailScreen = ({ route, navigation }) => {
         razorpay_signature: paymentData.razorpay_signature,
       });
 
-      Alert.alert('Success', 'Payment successful! ✅');
+      Alert.alert('Success', 'Payment successful!');
       navigation.goBack();
     } catch (err) {
       if (err.code === 'PAYMENT_CANCELLED' || err.description) {
@@ -161,14 +162,18 @@ const ShopDetailScreen = ({ route, navigation }) => {
 
         {/* Shop Banner */}
         <View style={styles.banner}>
-          <Text style={styles.bannerEmoji}>
-            {shop.category === 'men' ? '💈' : shop.category === 'women' ? '💅' : '✂️'}
-          </Text>
+          <Ionicons name={shop.category === 'women' ? 'sparkles' : 'cut'} size={60} color={COLORS.textSecondary} />
           <View style={styles.bannerOverlay}>
             <Text style={styles.bannerName}>{shop.name}</Text>
-            <Text style={styles.bannerAddress}>📍 {shop.address}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <Ionicons name="location-outline" size={11} color={COLORS.textSecondary} />
+              <Text style={styles.bannerAddress}>{shop.address}</Text>
+            </View>
             <View style={styles.bannerMeta}>
-              <Text style={styles.metaText}>⭐ {shop.rating > 0 ? shop.rating : 'New'}</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+                <Ionicons name="star" size={11} color={COLORS.warning} />
+                <Text style={styles.metaText}>{shop.rating > 0 ? shop.rating : 'New'}</Text>
+              </View>
               <Text style={styles.metaDot}>•</Text>
               <Text style={styles.metaText}>{shop.totalReviews} reviews</Text>
               <Text style={styles.metaDot}>•</Text>
@@ -189,7 +194,12 @@ const ShopDetailScreen = ({ route, navigation }) => {
               onPress={() => setTab(t)}
             >
               <Text style={[styles.tabText, tab === t && styles.tabTextActive]}>
-                {t === 'services' ? '✂️  Services' : '📅  Book Slot'}
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Ionicons name={t === 'services' ? 'cut-outline' : 'calendar-outline'} size={15} color={tab === t ? COLORS.white : COLORS.textSecondary} />
+                  <Text style={[styles.tabText, tab === t && styles.tabTextActive]}>
+                    {t === 'services' ? 'Services' : 'Book Slot'}
+                  </Text>
+                </View>
               </Text>
             </TouchableOpacity>
           ))}
@@ -208,13 +218,18 @@ const ShopDetailScreen = ({ route, navigation }) => {
               >
                 <View style={styles.serviceLeft}>
                   <Text style={styles.serviceName}>{service.name}</Text>
-                  <Text style={styles.serviceDuration}>⏱  {service.durationMin} mins</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                    <Ionicons name="time-outline" size={11} color={COLORS.textSecondary} />
+                    <Text style={styles.serviceDuration}>{service.durationMin} mins</Text>
+                  </View>
                   {service.description && <Text style={styles.serviceDesc}>{service.description}</Text>}
                 </View>
                 <View style={styles.serviceRight}>
                   <Text style={styles.servicePrice}>₹{service.price}</Text>
                   <View style={[styles.selectBtn, selectedServices.find(s => s._id === service._id) && styles.selectBtnActive]}>
-                    <Text style={styles.selectBtnText}>{selectedServices.find(s => s._id === service._id) ? '✓' : 'Select'}</Text>
+                    {selectedServices.find(s => s._id === service._id)
+                      ? <Ionicons name="checkmark" size={12} color={COLORS.white} />
+                      : <Text style={styles.selectBtnText}>Select</Text>}
                   </View>
                 </View>
               </TouchableOpacity>
@@ -231,7 +246,7 @@ const ShopDetailScreen = ({ route, navigation }) => {
                     onPress={() => setSelectedStaff(null)}
                   >
                     <View style={styles.staffAvatar}>
-                      <Text style={styles.staffAvatarText}>🎲</Text>
+                      <Ionicons name="shuffle-outline" size={20} color={COLORS.textSecondary} />
                     </View>
                     <Text style={[styles.staffName, !selectedStaff && styles.staffNameActive]}>Any</Text>
                     <Text style={styles.staffSpec}>Available</Text>
@@ -262,27 +277,6 @@ const ShopDetailScreen = ({ route, navigation }) => {
           </View>
         )}
 
-        {/* {selectedServices.length > 0 && (
-          <TouchableOpacity
-            style={styles.proceedBar}
-            onPress={() => setTab('slots')}
-            activeOpacity={0.8}
-          >
-            <View style={{ flex: 1 }}>
-              <Text style={styles.selectedServiceText}>
-                {selectedServices.map(s => s.name).join(' + ')}
-              </Text>
-              <Text style={[styles.selectedServicePrice, { fontSize: 11, marginTop: 2 }]}>
-                ⏱ {totalDuration} mins
-              </Text>
-            </View>
-            <Text style={styles.selectedServicePrice}>₹{totalPrice}</Text>
-            <View style={styles.proceedArrow}>
-              <Text style={styles.proceedArrowText}>→</Text>
-            </View>
-          </TouchableOpacity>
-        )}     */}  
-
         {/* ── SLOTS TAB ── */}
         {tab === 'slots' && (
           <View style={styles.section}>
@@ -291,7 +285,12 @@ const ShopDetailScreen = ({ route, navigation }) => {
               <View style={styles.recapCard}>
                 <View style={styles.recapRow}>
                   <Text style={styles.selectedServiceText} numberOfLines={1}>
-                    ✂️  {selectedServices.map(s => s.name).join(' + ')}
+                    <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, gap: 6 }}>
+                      <Ionicons name="cut-outline" size={14} color={COLORS.white} />
+                      <Text style={styles.selectedServiceText} numberOfLines={1}>
+                        {selectedServices.map(s => s.name).join(' + ')}
+                      </Text>
+                    </View>
                   </Text>
                   <Text style={styles.selectedServicePrice}>₹{totalPrice}</Text>
                 </View>
@@ -299,7 +298,10 @@ const ShopDetailScreen = ({ route, navigation }) => {
                   <>
                     <View style={styles.recapDivider} />
                     <View style={styles.recapRow}>
-                      <Text style={styles.selectedServiceText} numberOfLines={1}>👤  {selectedStaff.name}</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Ionicons name="person-outline" size={13} color={COLORS.white} />
+                        <Text style={styles.selectedServiceText} numberOfLines={1}>{selectedStaff.name}</Text>
+                      </View>
                       <Text style={styles.recapSubtext} numberOfLines={1}>{selectedStaff.speciality?.join(', ')}</Text>
                     </View>
                   </>
@@ -324,9 +326,9 @@ const ShopDetailScreen = ({ route, navigation }) => {
 
             {/* Time Slots */}
             <Text style={styles.sectionLabel}>Select Time</Text>
-            {!selectedServices ? (
+            {selectedServices.length === 0 ? (
               <View style={styles.hintBox}>
-                <Text style={styles.hintText}>← Please select a service first</Text>
+                <Text style={styles.hintText}>Please select a service first</Text>
               </View>
             ) : slotsLoading ? (
               <ActivityIndicator color={COLORS.accent} style={{ marginTop: SPACING.lg }} />
@@ -388,10 +390,18 @@ const ShopDetailScreen = ({ route, navigation }) => {
         <View style={styles.bottomBar}>
           <View style={{ flex: 1 }}>
             <Text style={styles.bottomService}>{selectedServices.map(s => s.name).join(' + ')}</Text>
-            <Text style={styles.bottomSlot}>
-              📅 {selectedDate}  ·  ⏰ {selectedSlot}
-              {selectedStaff ? `  ·  👤 ${selectedStaff.name}` : ''}
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
+              <Ionicons name="calendar-outline" size={11} color={COLORS.textSecondary} />
+              <Text style={styles.bottomSlot}>{selectedDate}</Text>
+              <Ionicons name="time-outline" size={11} color={COLORS.textSecondary} style={{ marginLeft: 4 }} />
+              <Text style={styles.bottomSlot}>{selectedSlot}</Text>
+              {selectedStaff && (
+                <>
+                  <Ionicons name="person-outline" size={11} color={COLORS.textSecondary} style={{ marginLeft: 4 }} />
+                  <Text style={styles.bottomSlot}>{selectedStaff.name}</Text>
+                </>
+              )}
+            </View>
           </View>
           <Button
             title={`Book ₹${totalPrice}`}

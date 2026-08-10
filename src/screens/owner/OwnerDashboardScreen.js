@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import { useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { COLORS, FONTS, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
@@ -49,7 +50,10 @@ const OwnerDashboardScreen = () => {
       {/* Header */}
       <View style={styles.header}>
         <View>
-          <Text style={styles.greeting}>Good {new Date().getHours() < 12 ? 'Morning' : 'Evening'} 👋</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <Text style={styles.greeting}>Good {new Date().getHours() < 12 ? 'Morning' : 'Evening'}</Text>
+            <Ionicons name="sunny-outline" size={14} color={COLORS.textSecondary} />
+          </View>
           <Text style={styles.shopName}>{shop?.name || 'Your Shop'}</Text>
         </View>
         <View style={[styles.statusDot, { backgroundColor: shop?.acceptingBookings ? COLORS.success : COLORS.error }]} />
@@ -87,7 +91,12 @@ const OwnerDashboardScreen = () => {
               <View style={styles.bookingInfo}>
                 <Text style={styles.customerName}>{b.userId?.name || 'Customer'}</Text>
                 <Text style={styles.serviceName}>{b.services?.map(s => s.name).join(' + ') || 'Service'} · ₹{b.amount}</Text>
-                {b.staffId && <Text style={styles.staffName}>👤 {b.staffId?.name}</Text>}
+                {b.staffId && (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 1 }}>
+                    <Ionicons name="person-outline" size={11} color={COLORS.textMuted} />
+                    <Text style={styles.staffName}>{b.staffId?.name}</Text>
+                  </View>
+                )}
               </View>
               <View style={[styles.badge, { backgroundColor: getStatusColor(b.status) + '25' }]}>
                 <Text style={[styles.badgeText, { color: getStatusColor(b.status) }]}>

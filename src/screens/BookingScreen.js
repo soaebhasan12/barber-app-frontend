@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import { useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, Alert, Modal, TextInput, ScrollView } from 'react-native';
 import { COLORS, FONTS, SPACING, RADIUS, SHADOWS } from '../constants/theme';
@@ -165,7 +166,7 @@ const BookingScreen = () => {
           <View style={styles.divider} />
 
           <View style={styles.infoRow}>
-            <Text style={styles.infoIcon}>✂️</Text>
+            <Ionicons name="cut-outline" size={14} color={COLORS.textSecondary} />
             <Text style={styles.infoText}>
               {item.services?.map(s => s.name).join(' + ') || 'Service'}
             </Text>
@@ -179,15 +180,30 @@ const BookingScreen = () => {
             </View>
           </View>
 
-          <View style={styles.infoRow}>
-            <Text style={styles.infoIcon}>📅</Text>
-            <Text style={styles.infoText}>{item.slotDate}</Text>
-            <Text style={styles.infoText}>⏰ {item.slotTime}</Text>
+          <View style={{ 
+            flexDirection: 'row', 
+            alignItems: 'center', 
+            flexWrap: 'wrap', // Screen choti hone par time niche aa jayega
+            gap: 16,          // Date aur Time ke beech me space
+            marginTop: 8      // Thoda top spacing design ke liye (adjust if needed)
+          }}>
+            
+            {/* Date Container */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <Ionicons name="calendar-outline" size={14} color={COLORS.textSecondary} />
+              <Text style={styles.infoText}>{item.slotDate ? item.slotDate : 'N/A'}</Text>
+            </View>
+
+            {/* Time Container */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <Ionicons name="time-outline" size={14} color={COLORS.textSecondary} />
+              <Text style={styles.infoText}>{item.slotTime ? item.slotTime : 'N/A'}</Text>
+            </View>
           </View>
 
           {item.staffId && (
             <View style={styles.infoRow}>
-              <Text style={styles.infoIcon}>👤</Text>
+              <Ionicons name="person-outline" size={14} color={COLORS.textSecondary} />
               <Text style={styles.infoText}>{item.staffId?.name}</Text>
             </View>
           )}
@@ -206,14 +222,20 @@ const BookingScreen = () => {
           {item.status === 'completed' && (
             reviewedIds.has(item._id) ? (
               <View style={[styles.reviewBtn, { borderColor: COLORS.success }]}>
-                <Text style={[styles.reviewBtnText, { color: COLORS.success }]}>✓ Reviewed</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  <Ionicons name="checkmark" size={14} color={COLORS.success} />
+                  <Text style={[styles.reviewBtnText, { color: COLORS.success }]}>Reviewed</Text>
+                </View>
               </View>
             ) : (
               <TouchableOpacity
                 style={styles.reviewBtn}
                 onPress={() => { setSelectedBooking(item); setReviewModal(true); }}
               >
-                <Text style={styles.reviewBtnText}>⭐ Write Review</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  <Ionicons name="star-outline" size={14} color={COLORS.warning} />
+                  <Text style={styles.reviewBtnText}>Write Review</Text>
+                </View>
               </TouchableOpacity>
             )
           )}
@@ -236,7 +258,7 @@ const BookingScreen = () => {
 
       {bookings.length === 0 ? (
         <View style={styles.center}>
-          <Text style={styles.emptyEmoji}>📅</Text>
+          <Ionicons name="calendar-outline" size={48} color={COLORS.textMuted} />
           <Text style={styles.emptyText}>No bookings yet</Text>
           <Text style={styles.emptySubtext}>Book a service to get started</Text>
         </View>
