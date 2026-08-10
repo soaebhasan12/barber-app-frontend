@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, Modal, TextInput, ActivityIndicator } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONTS, SPACING, RADIUS, SHADOWS } from '../constants/theme';
 import { useAuth } from '../context/AuthContext';
 import { authAPI } from '../services/api';
@@ -33,7 +34,9 @@ const ProfileScreen = () => {
 
   const InfoRow = ({ icon, label, value }) => (
     <View style={styles.infoRow}>
-      <Text style={styles.infoIcon}>{icon}</Text>
+      <View style={styles.infoIconWrap}>
+        <Ionicons name={icon} size={17} color={COLORS.accent} />
+      </View>
       <View>
         <Text style={styles.infoLabel}>{label}</Text>
         <Text style={styles.infoValue}>{value}</Text>
@@ -49,31 +52,39 @@ const ProfileScreen = () => {
 
       {/* Avatar */}
       <View style={styles.avatarSection}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>
-            {user?.name ? user.name.charAt(0).toUpperCase() : '?'}
-          </Text>
+        <View style={styles.avatarWrap}>
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>
+              {user?.name ? user.name.charAt(0).toUpperCase() : '?'}
+            </Text>
+          </View>
+          <TouchableOpacity
+            style={styles.editBadge}
+            onPress={() => { setNameInput(user?.name || ''); setEditModal(true); }}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="pencil" size={13} color={COLORS.white} />
+          </TouchableOpacity>
         </View>
         <Text style={styles.userName}>{user?.name || 'User'}</Text>
         <View style={styles.roleBadge}>
+          <Ionicons name={user?.role === 'owner' ? 'storefront-outline' : 'person-outline'} size={12} color={COLORS.textSecondary} />
           <Text style={styles.roleText}>
-            {user?.role === 'owner' ? '✂️  Shop Owner' : '👤  Customer'}
+            {user?.role === 'owner' ? 'Shop Owner' : 'Customer'}
           </Text>
         </View>
-        <TouchableOpacity style={styles.editNameBtn} onPress={() => { setNameInput(user?.name || ''); setEditModal(true); }}>
-          <Text style={styles.editNameText}>✎ Edit Name</Text>
-        </TouchableOpacity>
       </View>
 
       {/* Info Card */}
       <View style={styles.card}>
-        <InfoRow icon="📱" label="Phone" value={`+91 ${user?.phone}`} />
+        <InfoRow icon="call-outline" label="Phone" value={`+91 ${user?.phone}`} />
         <View style={styles.divider} />
-        <InfoRow icon="🎭" label="Account Type" value={user?.role === 'owner' ? 'Shop Owner' : 'Customer'} />
+        <InfoRow icon="person-circle-outline" label="Account Type" value={user?.role === 'owner' ? 'Shop Owner' : 'Customer'} />
       </View>
 
       {/* Logout */}
-      <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
+      <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout} activeOpacity={0.85}>
+        <Ionicons name="log-out-outline" size={18} color={COLORS.error} />
         <Text style={styles.logoutText}>Logout</Text>
       </TouchableOpacity>
 
@@ -108,8 +119,6 @@ const styles = StyleSheet.create({
   header:    { paddingHorizontal: SPACING.lg, paddingTop: SPACING.xl + 20, paddingBottom: SPACING.md },
   title:     { fontSize: FONTS.sizes.xxl, fontWeight: '700', color: COLORS.white },
 
-  editNameBtn:  { marginTop: SPACING.sm, paddingHorizontal: SPACING.md, paddingVertical: 4 },
-  editNameText: { color: COLORS.accent, fontSize: FONTS.sizes.sm, fontWeight: '600' },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' },
   modalCard:    { backgroundColor: COLORS.card, borderTopLeftRadius: RADIUS.xl, borderTopRightRadius: RADIUS.xl, padding: SPACING.lg, paddingBottom: SPACING.xxl },
   modalTitle:   { color: COLORS.white, fontSize: FONTS.sizes.xl, fontWeight: '700', marginBottom: SPACING.lg },
@@ -118,28 +127,35 @@ const styles = StyleSheet.create({
   modalBtn:     { flex: 1, padding: SPACING.md, borderRadius: RADIUS.md, borderWidth: 1, alignItems: 'center' },
 
   avatarSection: { alignItems: 'center', paddingVertical: SPACING.xl },
+  avatarWrap:    { position: 'relative', marginBottom: SPACING.md },
   avatar:        {
     width: 90, height: 90, borderRadius: 45,
     backgroundColor: COLORS.accent,
     alignItems: 'center', justifyContent: 'center',
-    marginBottom: SPACING.md,
     shadowColor: COLORS.accent,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.4, shadowRadius: 16, elevation: 10,
   },
   avatarText: { fontSize: 36, color: COLORS.white, fontWeight: '700' },
+  editBadge:  {
+    position: 'absolute', bottom: 0, right: 0,
+    width: 28, height: 28, borderRadius: 14,
+    backgroundColor: COLORS.accentDark,
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 2, borderColor: COLORS.background,
+  },
   userName:   { fontSize: FONTS.sizes.xl, fontWeight: '700', color: COLORS.white },
-  roleBadge:  { marginTop: SPACING.xs, paddingHorizontal: SPACING.md, paddingVertical: 4, backgroundColor: COLORS.card, borderRadius: RADIUS.full, borderWidth: 1, borderColor: COLORS.border },
+  roleBadge:  { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: SPACING.xs, paddingHorizontal: SPACING.md, paddingVertical: 4, backgroundColor: COLORS.card, borderRadius: RADIUS.full, borderWidth: 1, borderColor: COLORS.border },
   roleText:   { color: COLORS.textSecondary, fontSize: FONTS.sizes.sm },
 
-  card:     { marginHorizontal: SPACING.lg, backgroundColor: COLORS.card, borderRadius: RADIUS.lg, padding: SPACING.md, borderWidth: 1, borderColor: COLORS.border, ...SHADOWS.small },
-  infoRow:  { flexDirection: 'row', alignItems: 'center', gap: SPACING.md, paddingVertical: SPACING.sm },
-  infoIcon: { fontSize: 20 },
-  infoLabel:{ color: COLORS.textMuted, fontSize: FONTS.sizes.xs },
-  infoValue:{ color: COLORS.white, fontSize: FONTS.sizes.md, fontWeight: '500', marginTop: 2 },
-  divider:  { height: 1, backgroundColor: COLORS.border },
+  card:         { marginHorizontal: SPACING.lg, backgroundColor: COLORS.card, borderRadius: RADIUS.lg, padding: SPACING.md, borderWidth: 1, borderColor: COLORS.border, ...SHADOWS.small },
+  infoRow:      { flexDirection: 'row', alignItems: 'center', gap: SPACING.md, paddingVertical: SPACING.sm },
+  infoIconWrap: { width: 36, height: 36, borderRadius: 18, backgroundColor: COLORS.accent + '20', alignItems: 'center', justifyContent: 'center' },
+  infoLabel:    { color: COLORS.textMuted, fontSize: FONTS.sizes.xs },
+  infoValue:    { color: COLORS.white, fontSize: FONTS.sizes.md, fontWeight: '500', marginTop: 2 },
+  divider:      { height: 1, backgroundColor: COLORS.border },
 
-  logoutBtn:  { marginHorizontal: SPACING.lg, marginTop: SPACING.lg, padding: SPACING.md, borderRadius: RADIUS.md, borderWidth: 1.5, borderColor: COLORS.error, alignItems: 'center' },
+  logoutBtn:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginHorizontal: SPACING.lg, marginTop: SPACING.lg, padding: SPACING.md, borderRadius: RADIUS.md, borderWidth: 1.5, borderColor: COLORS.error },
   logoutText: { color: COLORS.error, fontWeight: '600', fontSize: FONTS.sizes.md },
 });
 

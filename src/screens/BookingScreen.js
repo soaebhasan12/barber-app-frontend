@@ -182,22 +182,25 @@ const BookingScreen = () => {
 
           <View style={{ 
             flexDirection: 'row', 
-            alignItems: 'center', 
-            flexWrap: 'wrap', // Screen choti hone par time niche aa jayega
-            gap: 16,          // Date aur Time ke beech me space
-            marginTop: 8      // Thoda top spacing design ke liye (adjust if needed)
+            alignItems: 'center',
+            gap: 12,
+            marginTop: 8
           }}>
             
             {/* Date Container */}
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
               <Ionicons name="calendar-outline" size={14} color={COLORS.textSecondary} />
-              <Text style={styles.infoText}>{item.slotDate ? item.slotDate : 'N/A'}</Text>
+              <Text style={{ color: COLORS.textSecondary, fontSize: FONTS.sizes.sm }} numberOfLines={1}>
+                {item.slotDate ? item.slotDate : 'N/A'}
+              </Text>
             </View>
 
             {/* Time Container */}
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
               <Ionicons name="time-outline" size={14} color={COLORS.textSecondary} />
-              <Text style={styles.infoText}>{item.slotTime ? item.slotTime : 'N/A'}</Text>
+              <Text style={{ color: COLORS.textSecondary, fontSize: FONTS.sizes.sm }} numberOfLines={1}>
+                {item.slotTime ? item.slotTime : 'N/A'}
+              </Text>
             </View>
           </View>
 
@@ -367,7 +370,7 @@ const styles = StyleSheet.create({
   title:       { fontSize: FONTS.sizes.xxl, fontWeight: '700', color: COLORS.white },
   list:        { padding: SPACING.lg, paddingBottom: 100 },
 
-  card:        { backgroundColor: COLORS.card, borderRadius: RADIUS.lg, padding: SPACING.md, marginBottom: SPACING.md, borderWidth: 1, borderColor: COLORS.border, ...SHADOWS.small },
+  card:        { backgroundColor: COLORS.card, borderRadius: RADIUS.lg, padding: SPACING.md, marginBottom: SPACING.md, borderWidth: 1, borderColor: COLORS.border, overflow: 'hidden', ...SHADOWS.small },
   cardHeader:  { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACING.sm },
   shopName:    { fontSize: FONTS.sizes.md, fontWeight: '700', color: COLORS.white, flex: 1 },
   statusBadge: { paddingHorizontal: SPACING.sm, paddingVertical: 3, borderRadius: RADIUS.full },

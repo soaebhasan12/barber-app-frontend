@@ -113,7 +113,7 @@ const HomeScreen = ({ navigation }) => {
             <Ionicons name="hand-left-outline" size={13} color={COLORS.textSecondary} />
           </View>
           <TouchableOpacity style={styles.notifBtn}>
-            <Ionicons name="notifications-outline" size={20} color={COLORS.white} /><Text style={styles.notifIcon}>🔔</Text>
+            <Ionicons name="notifications-outline" size={20} color={COLORS.white} />
           </TouchableOpacity>
         </View>
 
