@@ -262,7 +262,7 @@ const ShopDetailScreen = ({ route, navigation }) => {
           </View>
         )}
 
-        {selectedServices.length > 0 && (
+        {/* {selectedServices.length > 0 && (
           <TouchableOpacity
             style={styles.proceedBar}
             onPress={() => setTab('slots')}
@@ -281,25 +281,29 @@ const ShopDetailScreen = ({ route, navigation }) => {
               <Text style={styles.proceedArrowText}>→</Text>
             </View>
           </TouchableOpacity>
-        )}       
+        )}     */}  
 
         {/* ── SLOTS TAB ── */}
         {tab === 'slots' && (
           <View style={styles.section}>
 
-            {/* {selectedServices.length > 0 && (
-              <View style={styles.selectedServiceBar}>
-                <Text style={styles.selectedServiceText}>
-                  ✂️  {selectedServices.map(s => s.name).join(' + ')}
-                </Text>
-                <Text style={styles.selectedServicePrice}>₹{totalPrice}</Text>
-              </View>
-            )} */}
-
-            {selectedStaff && (
-              <View style={[styles.selectedServiceBar, { marginTop: 6 }]}>
-                <Text style={styles.selectedServiceText} numberOfLines={1}>👤  {selectedStaff.name}</Text>
-                <Text style={styles.selectedServicePrice} numberOfLines={1}>{selectedStaff.speciality?.join(', ')}</Text>
+            {selectedServices.length > 0 && (
+              <View style={styles.recapCard}>
+                <View style={styles.recapRow}>
+                  <Text style={styles.selectedServiceText} numberOfLines={1}>
+                    ✂️  {selectedServices.map(s => s.name).join(' + ')}
+                  </Text>
+                  <Text style={styles.selectedServicePrice}>₹{totalPrice}</Text>
+                </View>
+                {selectedStaff && (
+                  <>
+                    <View style={styles.recapDivider} />
+                    <View style={styles.recapRow}>
+                      <Text style={styles.selectedServiceText} numberOfLines={1}>👤  {selectedStaff.name}</Text>
+                      <Text style={styles.recapSubtext} numberOfLines={1}>{selectedStaff.speciality?.join(', ')}</Text>
+                    </View>
+                  </>
+                )}
               </View>
             )}
 
@@ -361,6 +365,23 @@ const ShopDetailScreen = ({ route, navigation }) => {
 
         <View style={{ height: 160 }} />
       </ScrollView>
+
+      {/* Sticky Proceed Bar — Services tab only, before slot chosen */}
+      {tab === 'services' && selectedServices.length > 0 && !selectedSlot && (
+        <View style={styles.stickyProceedBar}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.selectedServiceText} numberOfLines={1}>
+              {selectedServices.map(s => s.name).join(' + ')}
+            </Text>
+            <Text style={[styles.selectedServicePrice, { fontSize: 11, marginTop: 2 }]}>
+              ⏱ {totalDuration} mins · ₹{totalPrice}
+            </Text>
+          </View>
+          <TouchableOpacity style={styles.proceedBtn} onPress={() => setTab('slots')} activeOpacity={0.85}>
+            <Text style={styles.proceedBtnText}>Next →</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* Bottom Book Button */}
       {selectedServices.length > 0 && selectedSlot && (
@@ -436,6 +457,10 @@ const styles = StyleSheet.create({
   selectedServiceBar:   { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: COLORS.accent + '15', borderRadius: RADIUS.md, padding: SPACING.md, marginBottom: SPACING.sm, borderWidth: 1, borderColor: COLORS.accent + '50', width: '100%' },
   selectedServiceText:  { color: COLORS.white, fontWeight: '600', fontSize: FONTS.sizes.sm, flex: 1, },
   selectedServicePrice: { color: COLORS.accent, fontWeight: '700', fontSize: FONTS.sizes.md, },
+  recapCard:    { backgroundColor: COLORS.accent + '15', borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.accent + '50', marginBottom: SPACING.md, overflow: 'hidden' },
+  recapRow:     { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: SPACING.md },
+  recapDivider: { height: 1, backgroundColor: COLORS.accent + '30' },
+  recapSubtext: { color: COLORS.textSecondary, fontSize: FONTS.sizes.xs, flexShrink: 1, textAlign: 'right', marginLeft: SPACING.sm },
   proceedBar:        { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: COLORS.accent + '15', borderRadius: RADIUS.md, padding: SPACING.md, marginHorizontal: SPACING.lg, marginTop: SPACING.md, marginBottom: SPACING.sm, borderWidth: 1.5, borderColor: COLORS.accent, gap: SPACING.sm, ...SHADOWS.small },
   proceedArrow:      { width: 28, height: 28, borderRadius: 14, backgroundColor: COLORS.accent, alignItems: 'center', justifyContent: 'center' },
   proceedArrowText:  { color: COLORS.white, fontSize: 14, fontWeight: '700' },
@@ -462,6 +487,9 @@ const styles = StyleSheet.create({
   bottomBar: { position: 'absolute', bottom: 60, left: 0, right: 0, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: COLORS.card, padding: SPACING.md, borderTopWidth: 1, borderTopColor: COLORS.border, gap: SPACING.md, ...SHADOWS.medium },
   bottomService: { color: COLORS.white, fontWeight: '600', fontSize: FONTS.sizes.sm },
   bottomSlot:    { color: COLORS.textSecondary, fontSize: FONTS.sizes.xs, marginTop: 2 },
+  stickyProceedBar: { position: 'absolute', bottom: 60, left: 0, right: 0, flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.card, padding: SPACING.md, borderTopWidth: 1, borderTopColor: COLORS.border, gap: SPACING.md, ...SHADOWS.medium },
+  proceedBtn:       { backgroundColor: COLORS.accent, paddingHorizontal: SPACING.lg, paddingVertical: SPACING.sm, borderRadius: RADIUS.md },
+  proceedBtnText:   { color: COLORS.white, fontWeight: '700', fontSize: FONTS.sizes.sm },
 });
 
 export default ShopDetailScreen;
