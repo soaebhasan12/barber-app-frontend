@@ -8,6 +8,11 @@ import * as NavigationBar from 'expo-navigation-bar';
 import { COLORS } from './src/constants/theme';
 
 export default function App() {
+
+  useEffect(() => {
+    fetch('https://barber-app-backend-mebr.onrender.com/api').catch(() => {});
+  }, []);
+
   useEffect(() => {
     NavigationBar.setBackgroundColorAsync(COLORS.background);
     NavigationBar.setButtonStyleAsync('light');
