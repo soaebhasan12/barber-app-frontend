@@ -4,7 +4,7 @@ import { AuthProvider } from './src/context/AuthContext';
 import AppNavigator from './src/navigation';
 import { registerForPushNotificationsAsync } from './src/services/notifications';
 
-import * as NavigationBar from 'expo-navigation-bar';
+// import * as NavigationBar from 'expo-navigation-bar';
 import { COLORS } from './src/constants/theme';
 
 export default function App() {
@@ -13,10 +13,10 @@ export default function App() {
     fetch('https://barber-app-backend-mebr.onrender.com/api').catch(() => {});
   }, []);
 
-  useEffect(() => {
-    NavigationBar.setBackgroundColorAsync(COLORS.background);
-    NavigationBar.setButtonStyleAsync('light');
-  }, []);
+  // useEffect(() => {
+  //   NavigationBar.setBackgroundColorAsync(COLORS.background);
+  //   NavigationBar.setButtonStyleAsync('light');
+  // }, []);
 
   useEffect(() => {
     registerForPushNotificationsAsync();
