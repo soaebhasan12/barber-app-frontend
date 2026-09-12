@@ -138,7 +138,6 @@ const LoginScreen = () => {
                 placeholder="you@example.com"
                 keyboardType="email-address"
                 autoCapitalize="none"
-                maxLength={10}
                 error={error}
               />
 
