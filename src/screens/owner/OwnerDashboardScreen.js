@@ -34,6 +34,26 @@ const OwnerDashboardScreen = () => {
     }
   };
 
+  if (!loading && shop && shop.verificationStatus !== 'approved') {
+    return (
+      <View style={styles.center}>
+        <Ionicons
+          name={shop.verificationStatus === 'rejected' ? 'close-circle-outline' : 'time-outline'}
+          size={48}
+          color={shop.verificationStatus === 'rejected' ? COLORS.error : COLORS.warning}
+        />
+        <Text style={styles.reviewTitle}>
+          {shop.verificationStatus === 'rejected' ? 'Shop Rejected' : 'Shop Under Review'}
+        </Text>
+        <Text style={styles.reviewSubtext}>
+          {shop.verificationStatus === 'rejected'
+            ? (shop.rejectionReason || 'Your shop was not approved. Please contact support.')
+            : 'Your shop is being reviewed by our team. This usually takes 24-48 hours.'}
+        </Text>
+      </View>
+    );
+  }
+
   if (loading) return (
     <View style={styles.center}>
       <ActivityIndicator color={COLORS.accent} size="large" />
@@ -147,6 +167,8 @@ const styles = StyleSheet.create({
   staffName:    { color: COLORS.textMuted, fontSize: FONTS.sizes.xs, marginTop: 1 },
   badge:        { paddingHorizontal: SPACING.sm, paddingVertical: 3, borderRadius: RADIUS.full },
   badgeText:    { fontSize: 10, fontWeight: '700', textTransform: 'uppercase' },
+  reviewTitle:   { fontSize: FONTS.sizes.lg, fontWeight: '700', color: COLORS.white, marginTop: SPACING.md, textAlign: 'center' },
+  reviewSubtext: { fontSize: FONTS.sizes.sm, color: COLORS.textSecondary, marginTop: SPACING.sm, textAlign: 'center', paddingHorizontal: SPACING.xl },
 });
 
 export default OwnerDashboardScreen;
