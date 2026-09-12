@@ -18,8 +18,8 @@ api.interceptors.request.use(async (config) => {
 });
 
 export const authAPI = {
-  sendOTP:   (phone, role) => api.post('/auth/send-otp', { phone, role }),
-  verifyOTP: (phone, otp, name) => api.post('/auth/verify-otp', { phone, otp, name }),
+  sendOTP: ({ phone, email, role }) => api.post('/auth/send-otp', { phone, email, role }),
+  verifyOTP: ({ phone, email, otp, name }) => api.post('/auth/verify-otp', { phone, email, otp, name }),
   getMe:     () => api.get('/auth/me'),
   updateProfile: (name) => api.put('/auth/update-profile', { name }),
   updateFcmToken: (fcmToken) => api.put('/auth/update-fcm', { fcmToken }),

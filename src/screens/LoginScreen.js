@@ -15,8 +15,8 @@ const RESEND_SECONDS = 30;
 
 const LoginScreen = () => {
   const { login } = useAuth();
-  const [step, setStep]     = useState('phone');
-  const [phone, setPhone]   = useState('');
+  const [step, setStep] = useState('email');
+  const [email, setEmail] = useState('');
   const [otpDigits, setOtpDigits] = useState(Array(OTP_LENGTH).fill(''));
   const [name, setName]     = useState('');
   const [role, setRole]     = useState('user');
@@ -33,11 +33,12 @@ const LoginScreen = () => {
   }, [resendTimer]);
 
   const handleSendOTP = async () => {
-    if (phone.length !== 10) return setError('Please enter a valid 10-digit number');
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email.trim())) return setError('Please enter a valid email address');
     setError('');
     setLoading(true);
     try {
-      await authAPI.sendOTP(phone, role);
+      await authAPI.sendOTP({ email: email.trim(), role });
       setStep('otp');
       setOtpDigits(Array(OTP_LENGTH).fill(''));
       setResendTimer(RESEND_SECONDS);
@@ -54,7 +55,7 @@ const LoginScreen = () => {
     setError('');
     setLoading(true);
     try {
-      const res = await authAPI.verifyOTP(phone, otp, name);
+      const res = await authAPI.verifyOTP({ email: email.trim(), otp, name });
       await login(res.data.data.token, res.data.data.user);
     } catch (err) {
       setError(err.response?.data?.message || 'Invalid OTP. Please try again');
@@ -105,10 +106,10 @@ const LoginScreen = () => {
         {/* Card */}
         <View style={styles.card}>
 
-          {step === 'phone' && (
+          {step === 'email' && (
             <>
               <Text style={styles.title}>Welcome back</Text>
-              <Text style={styles.subtitle}>Apna phone number daalo</Text>
+              <Text style={styles.subtitle}>Enter your email address</Text>
 
               {/* Role Toggle */}
               <View style={styles.roleRow}>
@@ -131,18 +132,19 @@ const LoginScreen = () => {
               </View>
 
               <Input
-                label="Phone Number"
-                value={phone}
-                onChangeText={setPhone}
-                placeholder="10-digit number"
-                keyboardType="phone-pad"
+                label="Email Address"
+                value={email}
+                onChangeText={setEmail}
+                placeholder="you@example.com"
+                keyboardType="email-address"
+                autoCapitalize="none"
                 maxLength={10}
                 error={error}
               />
 
               <View style={styles.trustRow}>
                 <Ionicons name="shield-checkmark-outline" size={13} color={COLORS.textMuted} />
-                <Text style={styles.trustText}>Secure OTP verification via SMS</Text>
+                <Text style={styles.trustText}>Secure OTP verification via Email</Text>
               </View>
 
               <Button title="Send OTP" onPress={handleSendOTP} loading={loading} />
@@ -151,8 +153,8 @@ const LoginScreen = () => {
 
           {step === 'otp' && (
             <>
-              <Text style={styles.title}>OTP Verify karo</Text>
-              <Text style={styles.subtitle}>+91 {phone} pe bheja gaya</Text>
+              <Text style={styles.title}>Verify OTP</Text>
+              <Text style={styles.subtitle}>Sent to {email}</Text>
 
               <View style={styles.otpRow}>
                 {otpDigits.map((digit, i) => (
@@ -173,18 +175,18 @@ const LoginScreen = () => {
               {!!error && <Text style={styles.errorText}>{error}</Text>}
 
               <Input
-                label="Apna Naam (optional)"
+                label="Your Name (optional)"
                 value={name}
                 onChangeText={setName}
-                placeholder="Jaise: Rahul Sharma"
+                placeholder="e.g. Rahul Sharma"
               />
 
               <Button title="Verify & Login" onPress={handleVerifyOTP} loading={loading} />
 
               <View style={styles.footerRow}>
-                <TouchableOpacity onPress={() => { setStep('phone'); setError(''); }} style={styles.backBtn}>
+                <TouchableOpacity onPress={() => { setStep('email'); setError(''); }} style={styles.backBtn}>
                   <Ionicons name="arrow-back" size={14} color={COLORS.textSecondary} />
-                  <Text style={styles.backTxt}>Change number</Text>
+                  <Text style={styles.backTxt}>Change email</Text>
                 </TouchableOpacity>
 
                 {resendTimer > 0 ? (
@@ -201,7 +203,7 @@ const LoginScreen = () => {
         </View>
 
         <Text style={styles.terms}>
-          Login karke aap humare Terms & Privacy Policy se agree karte hain
+          By logging in, you agree to our Terms & Privacy Policy
         </Text>
 
       </ScrollView>
