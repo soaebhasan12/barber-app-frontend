@@ -77,7 +77,7 @@ const ProfileScreen = () => {
 
       {/* Info Card */}
       <View style={styles.card}>
-        <InfoRow icon="call-outline" label="Phone" value={`+91 ${user?.phone}`} />
+        <InfoRow icon="mail-outline" label="Email" value={user?.email || 'Not set'} />
         <View style={styles.divider} />
         <InfoRow icon="person-circle-outline" label="Account Type" value={user?.role === 'owner' ? 'Shop Owner' : 'Customer'} />
       </View>
