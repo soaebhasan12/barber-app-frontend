@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import * as Location from 'expo-location';
+import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator, Image } from 'react-native';
 import { COLORS, FONTS, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
 import { shopAPI, serviceAPI, staffAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
@@ -31,6 +33,58 @@ const OwnerShopScreen = () => {
   const [savingShopInfo, setSavingShopInfo] = useState(false);
   const [registering, setRegistering] = useState(false);
   const [regForm, setRegForm] = useState({ name: '', phone: '', address: '', category: 'unisex' });
+
+  const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const [regWorkingHours, setRegWorkingHours] = useState(
+    DAYS.map((_, i) => ({ day: i, open: '09:00', close: '21:00', isClosed: false }))
+  );
+
+  const isValidTime = (t) => /^([01]\d|2[0-3]):([0-5]\d)$/.test(t);
+  
+  const [regImages, setRegImages] = useState([]); // local URIs, pre-upload
+  const [uploadingImages, setUploadingImages] = useState(false);
+
+  const pickImages = async () => {
+    if (regImages.length >= 5) return Alert.alert('Limit reached', 'You can add up to 5 photos');
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') return Alert.alert('Permission Required', 'Please allow photo access to add shop images.');
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.7,
+      allowsMultipleSelection: true,
+      selectionLimit: 5 - regImages.length,
+    });
+    if (!result.canceled) {
+      setRegImages([...regImages, ...result.assets.map(a => a.uri)]);
+    }
+  };
+
+  const removeImage = (uri) => setRegImages(regImages.filter(u => u !== uri));
+
+  const uploadImagesToCloudinary = async () => {
+    const sigRes = await shopAPI.getUploadSignature();
+    const { signature, timestamp, folder, cloudName, apiKey } = sigRes.data.data;
+
+    const uploadedUrls = [];
+    for (const uri of regImages) {
+      const formData = new FormData();
+      formData.append('file', { uri, type: 'image/jpeg', name: 'shop.jpg' });
+      formData.append('api_key', apiKey);
+      formData.append('timestamp', timestamp);
+      formData.append('signature', signature);
+      formData.append('folder', folder);
+
+      const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await res.json();
+      if (!data.secure_url) throw new Error('Upload failed');
+      uploadedUrls.push(data.secure_url);
+    }
+    return uploadedUrls;
+  };
 
   useEffect(() => { fetchData(); }, []);
 
@@ -158,13 +212,47 @@ const OwnerShopScreen = () => {
     if (!regForm.name.trim() || !regForm.phone.trim() || !regForm.address.trim()) {
       return Alert.alert('Error', 'Please fill all fields');
     }
+
+    let lat, lng;
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        return Alert.alert('Location Required', 'Please enable location access so customers can find your shop.');
+      }
+      const location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      lat = location.coords.latitude;
+      lng = location.coords.longitude;
+    } catch (err) {
+      return Alert.alert('Error', 'Could not fetch your location. Please try again.');
+    }
+
     setRegistering(true);
     try {
-      // NOTE: hardcoded Delhi coords for now — replace with device GPS location in the full registration flow
-      await shopAPI.register({ ...regForm, lat: 28.8543, lng: 77.0924, workingHours: [] });
+      for (const wh of regWorkingHours) {
+        if (!wh.isClosed && (!isValidTime(wh.open) || !isValidTime(wh.close))) {
+          setRegistering(false);
+          return Alert.alert('Error', `Enter valid open/close time for ${DAYS[wh.day]} (HH:MM)`);
+        }
+      }
+      
+      let uploadedImages = [];
+      if (regImages.length > 0) {
+        setUploadingImages(true);
+        try {
+          uploadedImages = await uploadImagesToCloudinary();
+        } catch (err) {
+          console.log('image upload error:', err.message, err.response?.data);
+          setRegistering(false);
+          setUploadingImages(false);
+          return Alert.alert('Error', 'Failed to upload shop images. Please try again.');
+        }
+        setUploadingImages(false);
+      }
+      await shopAPI.register({ ...regForm, lat, lng, workingHours: regWorkingHours, images: uploadedImages });
       Alert.alert('Success', 'Shop registered! It will be reviewed by our team shortly.');
       fetchData();
     } catch (err) {
+      console.log('registerShop error:', err.message, err.response?.data);
       Alert.alert('Error', err.response?.data?.message || 'Failed to register shop');
     } finally {
       setRegistering(false);
@@ -194,12 +282,29 @@ const OwnerShopScreen = () => {
   );
 
   if (!shop) return (
-    <ScrollView style={styles.container} contentContainerStyle={{ padding: SPACING.lg, paddingTop: SPACING.xl + 20 }}>
+    <ScrollView style={styles.container} contentContainerStyle={{ padding: SPACING.lg, paddingTop: SPACING.xl + 20, paddingBottom: SPACING.xl + 40 }}>
       <Text style={styles.title}>Register Your Shop</Text>
       <View style={[styles.formCard, { marginTop: SPACING.lg }]}>
         <Input label="Shop Name" value={regForm.name} onChangeText={t => setRegForm({ ...regForm, name: t })} placeholder="e.g. Harun Barber Shop" />
         <Input label="Phone" value={regForm.phone} onChangeText={t => setRegForm({ ...regForm, phone: t })} placeholder="10-digit number" keyboardType="phone-pad" />
         <Input label="Address" value={regForm.address} onChangeText={t => setRegForm({ ...regForm, address: t })} placeholder="Shop address" />
+
+        <Text style={[styles.itemMeta, { marginBottom: SPACING.xs, marginTop: SPACING.sm }]}>Shop Photos ({regImages.length}/5)</Text>
+        <View style={styles.imageGrid}>
+          {regImages.map((uri) => (
+            <View key={uri} style={styles.imageThumbWrap}>
+              <Image source={{ uri }} style={styles.imageThumb} />
+              <TouchableOpacity style={styles.imageRemoveBtn} onPress={() => removeImage(uri)}>
+                <Ionicons name="close" size={12} color={COLORS.white} />
+              </TouchableOpacity>
+            </View>
+          ))}
+          {regImages.length < 5 && (
+            <TouchableOpacity style={styles.imageAddBtn} onPress={pickImages}>
+              <Ionicons name="camera-outline" size={22} color={COLORS.accent} />
+            </TouchableOpacity>
+          )}
+        </View>
 
         <Text style={[styles.itemMeta, { marginBottom: SPACING.xs, marginTop: 4 }]}>Category</Text>
         <View style={{ flexDirection: 'row', gap: SPACING.sm, marginBottom: SPACING.lg }}>
@@ -216,7 +321,56 @@ const OwnerShopScreen = () => {
           ))}
         </View>
 
-        <Button title="Register Shop" onPress={handleRegisterShop} loading={registering} />
+        <Text style={[styles.itemMeta, { marginBottom: SPACING.xs, marginTop: SPACING.sm }]}>Working Hours</Text>
+        {regWorkingHours.map((wh, i) => (
+          <View key={wh.day} style={styles.whRow}>
+            <Text style={styles.whDay}>{DAYS[wh.day]}</Text>
+            {wh.isClosed ? (
+              <Text style={styles.whClosedText}>Closed</Text>
+            ) : (
+              <>
+                <Input
+                  value={wh.open}
+                  onChangeText={t => {
+                    const updated = [...regWorkingHours];
+                    updated[i].open = t;
+                    setRegWorkingHours(updated);
+                  }}
+                  placeholder="09:00"
+                  style={styles.whInput}
+                />
+                <Text style={styles.whDash}>-</Text>
+                <Input
+                  value={wh.close}
+                  onChangeText={t => {
+                    const updated = [...regWorkingHours];
+                    updated[i].close = t;
+                    setRegWorkingHours(updated);
+                  }}
+                  placeholder="21:00"
+                  style={styles.whInput}
+                />
+              </>
+            )}
+            <TouchableOpacity onPress={() => {
+              const updated = [...regWorkingHours];
+              updated[i].isClosed = !updated[i].isClosed;
+              setRegWorkingHours(updated);
+            }}>
+              <Ionicons
+                name={wh.isClosed ? 'close-circle' : 'checkmark-circle-outline'}
+                size={22}
+                color={wh.isClosed ? COLORS.error : COLORS.success}
+              />
+            </TouchableOpacity>
+          </View>
+        ))}
+
+        <Button
+          title={uploadingImages ? 'Uploading photos...' : 'Register Shop'}
+          onPress={handleRegisterShop}
+          loading={registering}
+        />
       </View>
     </ScrollView>
   );
@@ -417,6 +571,18 @@ const styles = StyleSheet.create({
 
   staffAvatar:     { width: 40, height: 40, borderRadius: 20, backgroundColor: COLORS.accent, alignItems: 'center', justifyContent: 'center' },
   staffAvatarText: { color: COLORS.white, fontWeight: '700', fontSize: FONTS.sizes.md },
+
+  whRow:   { flexDirection: 'row', alignItems: 'center', gap: SPACING.xs, marginBottom: SPACING.xs },
+  whDay:   { color: COLORS.textSecondary, fontSize: FONTS.sizes.sm, width: 36 },
+  whInput: { flex: 1, marginBottom: 0 },
+  whDash:  { color: COLORS.textMuted },
+  whClosedText: { flex: 1, color: COLORS.textMuted, fontSize: FONTS.sizes.sm },
+
+  imageGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm, marginBottom: SPACING.sm },
+  imageThumbWrap: { width: 72, height: 72, borderRadius: RADIUS.md, overflow: 'hidden' },
+  imageThumb: { width: '100%', height: '100%' },
+  imageRemoveBtn: { position: 'absolute', top: 3, right: 3, width: 18, height: 18, borderRadius: 9, backgroundColor: COLORS.error, alignItems: 'center', justifyContent: 'center' },
+  imageAddBtn: { width: 72, height: 72, borderRadius: RADIUS.md, borderWidth: 1.5, borderColor: COLORS.accent, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center' },
 
   formCard: { backgroundColor: COLORS.card, borderRadius: RADIUS.lg, padding: SPACING.md, marginBottom: SPACING.md, borderWidth: 1, borderColor: COLORS.border },
   addBtn:   { borderWidth: 1.5, borderColor: COLORS.accent, borderStyle: 'dashed', borderRadius: RADIUS.md, padding: SPACING.md, alignItems: 'center', marginBottom: SPACING.md },

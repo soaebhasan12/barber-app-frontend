@@ -32,6 +32,7 @@ export const shopAPI = {
   getMyShop:  () => api.get('/shops/my-shop'),
   update: (data) => api.put('/shops/update', data),
   register:   (data) => api.post('/shops/register', data),
+  getUploadSignature: () => api.get('/shops/upload-signature'),
 };
 
 export const bookingAPI = {
