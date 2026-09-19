@@ -29,6 +29,8 @@ const OwnerShopScreen = () => {
   
   const [shopInfo, setShopInfo] = useState({ name: '', phone: '', address: '', category: 'unisex' });
   const [savingShopInfo, setSavingShopInfo] = useState(false);
+  const [registering, setRegistering] = useState(false);
+  const [regForm, setRegForm] = useState({ name: '', phone: '', address: '', category: 'unisex' });
 
   useEffect(() => { fetchData(); }, []);
 
@@ -46,7 +48,8 @@ const OwnerShopScreen = () => {
         category: shopData.category,
       });
     } catch (err) {
-      console.log('fetchData error:', err);
+      if (err.response?.status !== 404) console.log('fetchData error:', err);
+      // 404 = no shop yet, expected for a new owner — shop stays null, registration form shows
     } finally {
       setLoading(false);
     }
@@ -151,6 +154,23 @@ const OwnerShopScreen = () => {
     }
   };
 
+  const handleRegisterShop = async () => {
+    if (!regForm.name.trim() || !regForm.phone.trim() || !regForm.address.trim()) {
+      return Alert.alert('Error', 'Please fill all fields');
+    }
+    setRegistering(true);
+    try {
+      // NOTE: hardcoded Delhi coords for now — replace with device GPS location in the full registration flow
+      await shopAPI.register({ ...regForm, lat: 28.8543, lng: 77.0924, workingHours: [] });
+      Alert.alert('Success', 'Shop registered! It will be reviewed by our team shortly.');
+      fetchData();
+    } catch (err) {
+      Alert.alert('Error', err.response?.data?.message || 'Failed to register shop');
+    } finally {
+      setRegistering(false);
+    }
+  };
+
   const handleSaveShopInfo = async () => {
     if (!shopInfo.name.trim() || !shopInfo.phone.trim() || !shopInfo.address.trim()) {
       return Alert.alert('Error', 'Please fill all fields');
@@ -171,6 +191,34 @@ const OwnerShopScreen = () => {
     <View style={styles.center}>
       <ActivityIndicator color={COLORS.accent} size="large" />
     </View>
+  );
+
+  if (!shop) return (
+    <ScrollView style={styles.container} contentContainerStyle={{ padding: SPACING.lg, paddingTop: SPACING.xl + 20 }}>
+      <Text style={styles.title}>Register Your Shop</Text>
+      <View style={[styles.formCard, { marginTop: SPACING.lg }]}>
+        <Input label="Shop Name" value={regForm.name} onChangeText={t => setRegForm({ ...regForm, name: t })} placeholder="e.g. Harun Barber Shop" />
+        <Input label="Phone" value={regForm.phone} onChangeText={t => setRegForm({ ...regForm, phone: t })} placeholder="10-digit number" keyboardType="phone-pad" />
+        <Input label="Address" value={regForm.address} onChangeText={t => setRegForm({ ...regForm, address: t })} placeholder="Shop address" />
+
+        <Text style={[styles.itemMeta, { marginBottom: SPACING.xs, marginTop: 4 }]}>Category</Text>
+        <View style={{ flexDirection: 'row', gap: SPACING.sm, marginBottom: SPACING.lg }}>
+          {['men', 'women', 'unisex'].map(cat => (
+            <TouchableOpacity
+              key={cat}
+              style={[styles.tabBtn, { borderWidth: 1, borderColor: COLORS.border }, regForm.category === cat && styles.tabBtnActive]}
+              onPress={() => setRegForm({ ...regForm, category: cat })}
+            >
+              <Text style={[styles.tabText, regForm.category === cat && styles.tabTextActive]}>
+                {cat.charAt(0).toUpperCase() + cat.slice(1)}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        <Button title="Register Shop" onPress={handleRegisterShop} loading={registering} />
+      </View>
+    </ScrollView>
   );
 
   return (
