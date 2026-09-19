@@ -9,14 +9,15 @@ import { useAuth } from '../context/AuthContext';
 import { COLORS, RADIUS } from '../constants/theme';
 
 // Screens — abhi placeholder, baad mein replace karenge
-import LoginScreen    from '../screens/LoginScreen';
-import HomeScreen     from '../screens/HomeScreen';
-import BookingScreen  from '../screens/BookingScreen';
-import ProfileScreen  from '../screens/ProfileScreen';
-import ShopDetailScreen from '../screens/ShopDetailScreen';
+import LoginScreen          from '../screens/LoginScreen';
+import HomeScreen           from '../screens/HomeScreen';
+import BookingScreen        from '../screens/BookingScreen';
+import ProfileScreen        from '../screens/ProfileScreen';
+import ShopDetailScreen     from '../screens/ShopDetailScreen';
 import OwnerDashboardScreen from '../screens/owner/OwnerDashboardScreen';
 import OwnerBookingsScreen  from '../screens/owner/OwnerBookingsScreen';
 import OwnerShopScreen      from '../screens/owner/OwnerShopScreen';
+import AdminShopsScreen     from '../screens/admin/AdminShopsScreen';
 
 const Stack = createStackNavigator();
 const Tab   = createBottomTabNavigator();
@@ -86,6 +87,7 @@ const UserTabs = () => {
 };
 
 const OwnerTabs = () => {
+  const { user } = useAuth();
   const insets = useSafeAreaInsets();
   return (
     <Tab.Navigator screenOptions={{
@@ -118,6 +120,10 @@ const OwnerTabs = () => {
         options={{ tabBarIcon: ({ focused }) => <TabIcon name={focused ? 'calendar' : 'calendar-outline'} label="Bookings" focused={focused} /> }} />
       <Tab.Screen name="OwnerShop" component={OwnerShopScreen}
         options={{ tabBarIcon: ({ focused }) => <TabIcon name={focused ? 'storefront' : 'storefront-outline'} label="Shop" focused={focused} /> }} />
+      {user?.isAdmin && (
+        <Tab.Screen name="AdminShops" component={AdminShopsScreen}
+          options={{ tabBarIcon: ({ focused }) => <TabIcon name={focused ? 'shield-checkmark' : 'shield-checkmark-outline'} label="Admin" focused={focused} /> }} />
+      )}
       <Tab.Screen name="OwnerProfile" component={ProfileScreen}
         options={{ tabBarIcon: ({ focused }) => <TabIcon name={focused ? 'person' : 'person-outline'} label="Profile" focused={focused} /> }} />
     </Tab.Navigator>

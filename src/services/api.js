@@ -65,4 +65,10 @@ export const staffAPI = {
   remove:    (id) => api.delete(`/staff/${id}`),
 };
 
+export const adminAPI = {
+  getPendingShops: () => api.get('/admin/shops/pending'),
+  approveShop: (id) => api.put(`/admin/shops/${id}/approve`),
+  rejectShop: (id, reason) => api.put(`/admin/shops/${id}/reject`, { reason }),
+};
+
 export default api;

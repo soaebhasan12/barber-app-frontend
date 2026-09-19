@@ -75,12 +75,20 @@ const OwnerShopScreen = () => {
       formData.append('signature', signature);
       formData.append('folder', folder);
 
-      const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
-        method: 'POST',
-        body: formData,
+      const data = await new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`);
+        xhr.onload = () => {
+          try {
+            resolve(JSON.parse(xhr.responseText));
+          } catch (e) {
+            reject(new Error('Invalid response from Cloudinary'));
+          }
+        };
+        xhr.onerror = () => reject(new Error('Network error during upload'));
+        xhr.send(formData);
       });
-      const data = await res.json();
-      if (!data.secure_url) throw new Error('Upload failed');
+      if (!data.secure_url) throw new Error(data.error?.message || 'Upload failed');
       uploadedUrls.push(data.secure_url);
     }
     return uploadedUrls;
@@ -133,6 +141,7 @@ const OwnerShopScreen = () => {
         setEditingServiceId(null);
         fetchData();
       } catch (err) {
+        console.log('handleAddService error:', err.message, err.response?.data);
         Alert.alert('Error', editingServiceId ? 'Failed to update service' : 'Failed to add service');
       } finally {
         setAddingService(false);
@@ -147,6 +156,7 @@ const OwnerShopScreen = () => {
           await serviceAPI.remove(id);
           fetchData();
         } catch (err) {
+          console.log('handleRemoveService error:', err.message, err.response?.data);
           Alert.alert('Error', 'Failed to remove service');
         }
       }},
@@ -177,6 +187,7 @@ const OwnerShopScreen = () => {
       setEditingStaffId(null);
       fetchData();
     } catch (err) {
+      console.log('handleAddStaff error:', err.message, err.response?.data);
       Alert.alert('Error', editingStaffId ? 'Failed to update staff' : 'Failed to add staff');
     } finally {
       setAddingStaff(false);
@@ -187,8 +198,13 @@ const OwnerShopScreen = () => {
     Alert.alert('Remove Staff', 'Are you sure?', [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Remove', style: 'destructive', onPress: async () => {
-        await staffAPI.remove(id);
-        fetchData();
+        try {
+          await staffAPI.remove(id);
+          fetchData();
+        } catch (err) {
+          console.log('handleRemoveStaff error:', err.message, err.response?.data);
+          Alert.alert('Error', 'Failed to remove staff');
+        }
       }},
     ]);
   };
@@ -204,6 +220,7 @@ const OwnerShopScreen = () => {
       await shopAPI.update({ acceptingBookings: !shop.acceptingBookings });
       fetchData();
     } catch (err) {
+      console.log('toggleAccepting error:', err.message, err.response?.data);
       Alert.alert('Error', 'Failed to update shop');
     }
   };
@@ -269,6 +286,7 @@ const OwnerShopScreen = () => {
       fetchData();
       Alert.alert('Success', 'Shop details updated');
     } catch (err) {
+      console.log('handleSaveShopInfo error:', err.message, err.response?.data);
       Alert.alert('Error', 'Failed to update shop details');
     } finally {
       setSavingShopInfo(false);
