@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import {
   View, Text, StyleSheet, ScrollView,
-  TouchableOpacity, ActivityIndicator, Alert,
+  TouchableOpacity, ActivityIndicator, Alert, Image, Dimensions,
 } from 'react-native';
 import { COLORS, FONTS, SPACING, RADIUS, SHADOWS } from '../constants/theme';
 import { serviceAPI, bookingAPI, staffAPI, paymentAPI } from '../services/api';
@@ -25,8 +25,23 @@ const ShopDetailScreen = ({ route, navigation }) => {
   const [booking, setBooking]           = useState(false);
   const [tab, setTab]                   = useState('services');
 
+  const bannerScrollRef = useRef(null);
+  const [bannerIndex, setBannerIndex] = useState(0);
+
   useEffect(() => { fetchInitialData(); }, []);
   useEffect(() => { fetchSlots(); }, [selectedDate, selectedStaff]);
+
+  useEffect(() => {
+    if (!shop.images || shop.images.length <= 1) return;
+    const interval = setInterval(() => {
+      setBannerIndex(prev => {
+        const next = (prev + 1) % shop.images.length;
+        bannerScrollRef.current?.scrollTo({ x: next * (Dimensions.get('window').width - SPACING.lg * 2), animated: true });
+        return next;
+      });
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
 
   const fetchInitialData = async () => {
     try {
@@ -162,7 +177,15 @@ const ShopDetailScreen = ({ route, navigation }) => {
 
         {/* Shop Banner */}
         <View style={styles.banner}>
-          <Ionicons name={shop.category === 'women' ? 'sparkles' : 'cut'} size={60} color={COLORS.textSecondary} />
+          {shop.images?.length > 0 ? (
+            <ScrollView ref={bannerScrollRef} horizontal pagingEnabled showsHorizontalScrollIndicator={false} style={StyleSheet.absoluteFill}>
+              {shop.images.map((uri, i) => (
+                <Image key={i} source={{ uri }} style={styles.bannerImage} />
+              ))}
+            </ScrollView>
+          ) : (
+            <Ionicons name={shop.category === 'women' ? 'sparkles' : 'cut'} size={60} color={COLORS.textSecondary} />
+          )}
           <View style={styles.bannerOverlay}>
             <Text style={styles.bannerName}>{shop.name}</Text>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
@@ -426,6 +449,7 @@ const styles = StyleSheet.create({
 
   banner:        { height: 180, backgroundColor: COLORS.card, alignItems: 'center', justifyContent: 'center', marginHorizontal: SPACING.lg, borderRadius: RADIUS.xl, borderWidth: 1, borderColor: COLORS.border, overflow: 'hidden' },
   bannerEmoji:   { fontSize: 60 },
+  bannerImage: { width: Dimensions.get('window').width - SPACING.lg * 2, height: 180 },
   bannerOverlay: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: SPACING.md, backgroundColor: 'rgba(0,0,0,0.65)' },
   bannerName:    { color: COLORS.white, fontSize: FONTS.sizes.lg, fontWeight: '700' },
   bannerAddress: { color: COLORS.textSecondary, fontSize: FONTS.sizes.xs, marginTop: 2 },

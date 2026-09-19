@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import {
   View, Text, StyleSheet, ScrollView,
-  TouchableOpacity, FlatList, ActivityIndicator, TextInput
+  TouchableOpacity, FlatList, ActivityIndicator, TextInput, Image
 } from 'react-native';
 import { COLORS, FONTS, SPACING, RADIUS, SHADOWS } from '../constants/theme';
 import { useAuth } from '../context/AuthContext';
@@ -68,16 +68,25 @@ const HomeScreen = ({ navigation }) => {
       onPress={() => navigation.navigate('ShopDetail', { shop })}
     >
       {/* Shop Image Placeholder */}
-      <View style={[styles.shopImage, { backgroundColor: getCategoryColor(shop.category) + '30' }]}>
-        <Ionicons
-          name={shop.category === 'men' ? 'cut' : shop.category === 'women' ? 'sparkles' : 'cut'}
-          size={44}
-          color={getCategoryColor(shop.category)}
-        />
-        <View style={[styles.categoryBadge, { backgroundColor: getCategoryColor(shop.category) }]}>
-          <Text style={styles.categoryText}>{shop.category.toUpperCase()}</Text>
+      {shop.images?.length > 0 ? (
+        <View style={styles.shopImage}>
+          <Image source={{ uri: shop.images[0] }} style={styles.shopImageActual} />
+          <View style={[styles.categoryBadge, { backgroundColor: getCategoryColor(shop.category) }]}>
+            <Text style={styles.categoryText}>{shop.category.toUpperCase()}</Text>
+          </View>
         </View>
-      </View>
+      ) : (
+        <View style={[styles.shopImage, { backgroundColor: getCategoryColor(shop.category) + '30' }]}>
+          <Ionicons
+            name={shop.category === 'men' ? 'cut' : shop.category === 'women' ? 'sparkles' : 'cut'}
+            size={44}
+            color={getCategoryColor(shop.category)}
+          />
+          <View style={[styles.categoryBadge, { backgroundColor: getCategoryColor(shop.category) }]}>
+            <Text style={styles.categoryText}>{shop.category.toUpperCase()}</Text>
+          </View>
+        </View>
+      )}
 
       {/* Shop Info */}
       <View style={styles.shopInfo}>
@@ -237,6 +246,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   shopEmoji:     { fontSize: 48 },
+  shopImageActual: { width: '100%', height: '100%' },
   categoryBadge: {
     position:     'absolute',
     top:          SPACING.sm,
