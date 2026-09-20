@@ -122,7 +122,7 @@ const HomeScreen = ({ navigation }) => {
             <Ionicons name="hand-left-outline" size={13} color={COLORS.textSecondary} />
           </View>
           <TouchableOpacity style={styles.notifBtn}>
-            <Ionicons name="notifications-outline" size={20} color={COLORS.white} />
+            <Ionicons name="notifications-outline" size={20} color={COLORS.textPrimary} />
           </TouchableOpacity>
         </View>
 
@@ -186,7 +186,7 @@ const styles = StyleSheet.create({
     paddingBottom:  SPACING.md,
   },
   greeting: { fontSize: FONTS.sizes.sm, color: COLORS.textSecondary },
-  userName: { fontSize: FONTS.sizes.xl, fontWeight: '700', color: COLORS.white, marginTop: 2 },
+  userName: { fontSize: FONTS.sizes.xl, fontWeight: '700', color: COLORS.textPrimary, marginTop: 2 },
   notifBtn: {
     width: 44, height: 44, borderRadius: 22,
     backgroundColor: COLORS.card,
@@ -228,7 +228,7 @@ const styles = StyleSheet.create({
 
   section:       { paddingHorizontal: SPACING.lg, paddingBottom: SPACING.xl },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACING.md },
-  sectionTitle:  { fontSize: FONTS.sizes.lg, fontWeight: '700', color: COLORS.white },
+  sectionTitle:  { fontSize: FONTS.sizes.lg, fontWeight: '700', color: COLORS.textPrimary },
   seeAll:        { fontSize: FONTS.sizes.sm, color: COLORS.accent, fontWeight: '600' },
 
   shopCard: {
@@ -259,7 +259,7 @@ const styles = StyleSheet.create({
 
   shopInfo:   { padding: SPACING.md },
   shopHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
-  shopName:   { fontSize: FONTS.sizes.md, fontWeight: '700', color: COLORS.white, flex: 1 },
+  shopName:   { fontSize: FONTS.sizes.md, fontWeight: '700', color: COLORS.textPrimary, flex: 1 },
   ratingRow:  { flexDirection: 'row', alignItems: 'center', gap: 2 },
   star:       { color: COLORS.warning, fontSize: 14 },
   rating:     { color: COLORS.textSecondary, fontSize: FONTS.sizes.sm, fontWeight: '600' },
