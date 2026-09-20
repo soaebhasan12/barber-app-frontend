@@ -1,34 +1,23 @@
 export const COLORS = {
-  // Primary
-  primary:        '#1E1E20',   // Warm dark neutral — main brand color
-  primaryLight:   '#2A2A2E',
-  accent:         '#C87A63',   // Muted terracotta — buttons, highlights
-  accentLight:    '#DDA18F',
-  accentDark:     '#A85F49',   // Pressed/active states, ensures contrast
-
-  // Backgrounds
-  background:     '#161618',   // Warm obsidian background
-  card:           '#202024',   // Card background
-  cardLight:      '#2A2A2E',   // Slightly lighter card
-
-  // Text
-  textPrimary:    '#F2F2F2',
-  textSecondary:  '#94949C',
-  textMuted:      '#606070',
-
-  // Status
-  success:        '#24B37F',
-  warning:        '#E6A94A',
-  error:          '#E25858',
-
-  // Category badges (used in HomeScreen/ShopDetailScreen)
-  categoryMen:    '#7898B0',
-  categoryWomen:  '#C4849B',
-
-  // Others
-  border:         '#2E2E32',
-  inputBg:        '#202024',
-  overlay:        'rgba(0,0,0,0.7)',
+  primary:        '#2D6A6A',
+  primaryLight:   '#4A8F8F',
+  accent:         '#E8875A',
+  accentLight:    '#F2A67D',
+  accentDark:     '#C96A3E',
+  background:     '#FDF8F4',
+  card:           '#FFFFFF',
+  cardLight:      '#F5EFE8',
+  textPrimary:    '#2A2A2E',
+  textSecondary:  '#6B6B75',
+  textMuted:      '#A0A0AA',
+  success:        '#3FAE7A',
+  warning:        '#E8A93D',
+  error:          '#E4584F',
+  categoryMen:    '#5B8DB8',
+  categoryWomen:  '#D6789A',
+  border:         '#EDE4DC',
+  inputBg:        '#FFFFFF',
+  overlay:        'rgba(0,0,0,0.5)',
   white:          '#FFFFFF',
   black:          '#000000',
 };

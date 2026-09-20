@@ -218,7 +218,7 @@ const ShopDetailScreen = ({ route, navigation }) => {
             >
               <Text style={[styles.tabText, tab === t && styles.tabTextActive]}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Ionicons name={t === 'services' ? 'cut-outline' : 'calendar-outline'} size={15} color={tab === t ? COLORS.white : COLORS.textSecondary} />
+                  <Ionicons name={t === 'services' ? 'cut-outline' : 'calendar-outline'} size={15} color={tab === t ? COLORS.white: COLORS.textSecondary} />
                   <Text style={[styles.tabText, tab === t && styles.tabTextActive]}>
                     {t === 'services' ? 'Services' : 'Book Slot'}
                   </Text>
@@ -251,7 +251,7 @@ const ShopDetailScreen = ({ route, navigation }) => {
                   <Text style={styles.servicePrice}>₹{service.price}</Text>
                   <View style={[styles.selectBtn, selectedServices.find(s => s._id === service._id) && styles.selectBtnActive]}>
                     {selectedServices.find(s => s._id === service._id)
-                      ? <Ionicons name="checkmark" size={12} color={COLORS.white} />
+                      ? <Ionicons name="checkmark" size={12} color={COLORS.textPrimary} />
                       : <Text style={styles.selectBtnText}>Select</Text>}
                   </View>
                 </View>
@@ -309,7 +309,7 @@ const ShopDetailScreen = ({ route, navigation }) => {
                 <View style={styles.recapRow}>
                   <Text style={styles.selectedServiceText} numberOfLines={1}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, gap: 6 }}>
-                      <Ionicons name="cut-outline" size={14} color={COLORS.white} />
+                      <Ionicons name="cut-outline" size={14} color={COLORS.textPrimary} />
                       <Text style={styles.selectedServiceText} numberOfLines={1}>
                         {selectedServices.map(s => s.name).join(' + ')}
                       </Text>
@@ -317,16 +317,31 @@ const ShopDetailScreen = ({ route, navigation }) => {
                   </Text>
                   <Text style={styles.selectedServicePrice}>₹{totalPrice}</Text>
                 </View>
+                
                 {selectedStaff && (
                   <>
                     <View style={styles.recapDivider} />
                     <View style={styles.recapRow}>
+                      <Text style={styles.selectedServiceText} numberOfLines={1}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, gap: 6 }}>
+                          <Ionicons name="person-outline" size={14} color={COLORS.textPrimary} />
+                          <Text style={styles.selectedServiceText} numberOfLines={1}>
+                            Service By
+                          </Text>
+                        </View>
+                      </Text>
+                      <Text style={styles.selectedServicePrice}>{selectedStaff.name}</Text>
+                    </View>
+                    
+                    {/* 
+                    <View style={styles.recapRow}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                        <Ionicons name="person-outline" size={13} color={COLORS.white} />
-                        <Text style={styles.selectedServiceText} numberOfLines={1}>{selectedStaff.name}</Text>
+                        <Ionicons name="person-outline" size={13} color={COLORS.textPrimary} />
+                        <Text style={styles.selectedServiceText} numberOfLines={1}>Service By {selectedStaff.name}</Text>
                       </View>
                       <Text style={styles.recapSubtext} numberOfLines={1}>{selectedStaff.speciality?.join(', ')}</Text>
-                    </View>
+                    </View> 
+                    */}
                   </>
                 )}
               </View>
@@ -444,8 +459,8 @@ const styles = StyleSheet.create({
 
   header:      { flexDirection: 'row', alignItems: 'center', paddingHorizontal: SPACING.md, paddingTop: SPACING.xl + 20, paddingBottom: SPACING.md },
   backBtn:     { width: 40, height: 40, borderRadius: 20, backgroundColor: COLORS.card, alignItems: 'center', justifyContent: 'center' },
-  backIcon:    { color: COLORS.white, fontSize: 20, fontWeight: '600' },
-  headerTitle: { flex: 1, textAlign: 'center', color: COLORS.white, fontSize: FONTS.sizes.lg, fontWeight: '700' },
+  backIcon:    { color: COLORS.textPrimary, fontSize: 20, fontWeight: '600' },
+  headerTitle: { flex: 1, textAlign: 'center', color: COLORS.textPrimary, fontSize: FONTS.sizes.lg, fontWeight: '700' },
 
   banner:        { height: 180, backgroundColor: COLORS.card, alignItems: 'center', justifyContent: 'center', marginHorizontal: SPACING.lg, borderRadius: RADIUS.xl, borderWidth: 1, borderColor: COLORS.border, overflow: 'hidden' },
   bannerEmoji:   { fontSize: 60 },
@@ -470,14 +485,14 @@ const styles = StyleSheet.create({
   serviceCard:       { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: COLORS.card, borderRadius: RADIUS.lg, padding: SPACING.md, marginBottom: SPACING.sm, borderWidth: 1.5, borderColor: COLORS.border },
   serviceCardActive: { borderColor: COLORS.accent, backgroundColor: COLORS.accent + '15' },
   serviceLeft:       { flex: 1 },
-  serviceName:       { color: COLORS.white, fontSize: FONTS.sizes.md, fontWeight: '600' },
+  serviceName:       { color: COLORS.textPrimary, fontSize: FONTS.sizes.md, fontWeight: '600' },
   serviceDuration:   { color: COLORS.textSecondary, fontSize: FONTS.sizes.xs, marginTop: 2 },
   serviceDesc:       { color: COLORS.textMuted, fontSize: FONTS.sizes.xs, marginTop: 2 },
   serviceRight:      { alignItems: 'flex-end', gap: SPACING.xs },
   servicePrice:      { color: COLORS.accent, fontSize: FONTS.sizes.lg, fontWeight: '700' },
   selectBtn:         { paddingHorizontal: SPACING.sm, paddingVertical: 4, borderRadius: RADIUS.full, borderWidth: 1, borderColor: COLORS.border },
   selectBtnActive:   { backgroundColor: COLORS.accent, borderColor: COLORS.accent },
-  selectBtnText:     { color: COLORS.white, fontSize: FONTS.sizes.xs, fontWeight: '600' },
+  selectBtnText:     { color: COLORS.textPrimary, fontSize: FONTS.sizes.xs, fontWeight: '600' },
 
   staffCard:        { alignItems: 'center', marginRight: SPACING.md, padding: SPACING.sm, borderRadius: RADIUS.lg, borderWidth: 1.5, borderColor: COLORS.border, backgroundColor: COLORS.card, width: 90 },
   staffCardActive:  { borderColor: COLORS.accent, backgroundColor: COLORS.accent + '15' },
@@ -489,7 +504,7 @@ const styles = StyleSheet.create({
   staffSpec:        { color: COLORS.textMuted, fontSize: 10, textAlign: 'center', marginTop: 2 },
 
   selectedServiceBar:   { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: COLORS.accent + '15', borderRadius: RADIUS.md, padding: SPACING.md, marginBottom: SPACING.sm, borderWidth: 1, borderColor: COLORS.accent + '50', width: '100%' },
-  selectedServiceText:  { color: COLORS.white, fontWeight: '600', fontSize: FONTS.sizes.sm, flex: 1, },
+  selectedServiceText:  { color: COLORS.textPrimary, fontWeight: '600', fontSize: FONTS.sizes.sm, flex: 1, },
   selectedServicePrice: { color: COLORS.accent, fontWeight: '700', fontSize: FONTS.sizes.md, },
   recapCard:    { backgroundColor: COLORS.accent + '15', borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.accent + '50', marginBottom: SPACING.md, overflow: 'hidden' },
   recapRow:     { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: SPACING.md },
@@ -503,7 +518,7 @@ const styles = StyleSheet.create({
   dateCardActive: { backgroundColor: COLORS.accent, borderColor: COLORS.accent },
   dateDay:        { color: COLORS.textSecondary, fontSize: FONTS.sizes.xs, fontWeight: '500' },
   dateDayActive:  { color: COLORS.white },
-  dateNum:        { color: COLORS.white, fontSize: FONTS.sizes.xl, fontWeight: '700', marginTop: 2 },
+  dateNum:        { color: COLORS.textPrimary, fontSize: FONTS.sizes.xl, fontWeight: '700', marginTop: 2 },
   dateNumActive:  { color: COLORS.white },
 
   slotsGrid:        { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm },
@@ -519,7 +534,7 @@ const styles = StyleSheet.create({
   hintText: { color: COLORS.textMuted, fontSize: FONTS.sizes.sm },
 
   bottomBar: { position: 'absolute', bottom: 60, left: 0, right: 0, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: COLORS.card, padding: SPACING.md, borderTopWidth: 1, borderTopColor: COLORS.border, gap: SPACING.md, ...SHADOWS.medium },
-  bottomService: { color: COLORS.white, fontWeight: '600', fontSize: FONTS.sizes.sm },
+  bottomService: { color: COLORS.textPrimary, fontWeight: '600', fontSize: FONTS.sizes.sm },
   bottomSlot:    { color: COLORS.textSecondary, fontSize: FONTS.sizes.xs, marginTop: 2 },
   stickyProceedBar: { position: 'absolute', bottom: 60, left: 0, right: 0, flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.card, padding: SPACING.md, borderTopWidth: 1, borderTopColor: COLORS.border, gap: SPACING.md, ...SHADOWS.medium },
   proceedBtn:       { backgroundColor: COLORS.accent, paddingHorizontal: SPACING.lg, paddingVertical: SPACING.sm, borderRadius: RADIUS.md },

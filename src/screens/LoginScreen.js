@@ -226,7 +226,7 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     elevation: 10,
   },
-  appName:   { fontSize: FONTS.sizes.xxxl, fontWeight: '700', color: COLORS.white, letterSpacing: 1 },
+  appName:   { fontSize: FONTS.sizes.xxxl, fontWeight: '700', color: COLORS.textPrimary, letterSpacing: 1 },
   tagline:   { fontSize: FONTS.sizes.sm, color: COLORS.textSecondary, marginTop: 4 },
 
   card: {
@@ -237,7 +237,7 @@ const styles = StyleSheet.create({
     borderColor:     COLORS.border,
   },
 
-  title:    { fontSize: FONTS.sizes.xl, fontWeight: '700', color: COLORS.white, marginBottom: 4 },
+  title:    { fontSize: FONTS.sizes.xl, fontWeight: '700', color: COLORS.textPrimary, marginBottom: 4 },
   subtitle: { fontSize: FONTS.sizes.sm, color: COLORS.textSecondary, marginBottom: SPACING.lg },
 
   roleRow: { flexDirection: 'row', gap: SPACING.sm, marginBottom: SPACING.lg },
@@ -258,7 +258,7 @@ const styles = StyleSheet.create({
     width: 44, height: 52, borderRadius: RADIUS.md,
     borderWidth: 1.5, borderColor: COLORS.border,
     backgroundColor: COLORS.inputBg,
-    color: COLORS.white, fontSize: FONTS.sizes.xl, fontWeight: '700',
+    color: COLORS.textPrimary, fontSize: FONTS.sizes.xl, fontWeight: '700',
     textAlign: 'center',
   },
   otpBoxFilled: { borderColor: COLORS.accent },
