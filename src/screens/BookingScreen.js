@@ -277,7 +277,7 @@ const BookingScreen = () => {
       )}
 
       <Modal visible={reviewModal} transparent animationType="slide">
-        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>Rate your experience</Text>
             <Text style={styles.modalShop}>{selectedBooking?.shopId?.name}</Text>
