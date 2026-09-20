@@ -15,6 +15,7 @@ const HomeScreen = ({ navigation }) => {
   const [loading, setLoading]   = useState(true);
   const [allShops, setAllShops]     = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeFilter, setActiveFilter] = useState('All');
 
   useEffect(() => {
     fetchShops();
@@ -52,13 +53,33 @@ const HomeScreen = ({ navigation }) => {
     return COLORS.accent;
   };
 
+  const applyFilters = (query, category, sourceShops = allShops) => {
+    let result = sourceShops;
+
+    if (category && category !== 'All' && category !== 'Nearby') {
+      const categoryKey = category.toLowerCase();
+      result = result.filter(s => s.category === categoryKey);
+    }
+
+    if (query) {
+      const q = query.toLowerCase();
+      result = result.filter(s =>
+        s.name?.toLowerCase().includes(q) ||
+        s.address?.toLowerCase().includes(q)
+      );
+    }
+
+    setShops(result);
+  };
+
   const handleSearch = (text) => {
     setSearchQuery(text);
-    if (!text) return setShops(allShops);
-    setShops(allShops.filter(s =>
-      s.name.toLowerCase().includes(text.toLowerCase()) ||
-      s.address.toLowerCase().includes(text.toLowerCase())
-    ));
+    applyFilters(text, activeFilter);
+  };
+
+  const handleFilterPress = (f) => {
+    setActiveFilter(f);
+    applyFilters(searchQuery, f);
   };
 
   const ShopCard = ({ shop }) => (
@@ -113,7 +134,7 @@ const HomeScreen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView showsVerticalScrollIndicator={false} nestedScrollEnabled={true}>
 
         {/* Header */}
         <View style={styles.header}>
@@ -141,12 +162,17 @@ const HomeScreen = ({ navigation }) => {
         {/* Filter Pills */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll}>
           {['All', 'Men', 'Women', 'Unisex', 'Nearby'].map((f) => (
-            <TouchableOpacity key={f} style={[styles.filterPill, f === 'All' && styles.filterPillActive]}>
-              <Text style={[styles.filterText, f === 'All' && styles.filterTextActive]}>{f}</Text>
+            <TouchableOpacity
+              key={f}
+              style={[styles.filterPill, activeFilter === f && styles.filterPillActive]}
+              onPress={() => handleFilterPress(f)}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.filterText, activeFilter === f && styles.filterTextActive]}>{f}</Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
-
+        
         {/* Nearby Shops */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
