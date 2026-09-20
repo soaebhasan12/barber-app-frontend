@@ -144,16 +144,16 @@ const styles = StyleSheet.create({
 
   header:    { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: SPACING.lg, paddingTop: SPACING.xl + 20, paddingBottom: SPACING.md },
   greeting:  { fontSize: FONTS.sizes.sm, color: COLORS.textSecondary },
-  shopName:  { fontSize: FONTS.sizes.xl, fontWeight: '700', color: COLORS.white, marginTop: 2 },
+  shopName:  { fontSize: FONTS.sizes.xl, fontWeight: '700', color: COLORS.textPrimary, marginTop: 2 },
   statusDot: { width: 12, height: 12, borderRadius: 6 },
 
   statsGrid: { flexDirection: 'row', paddingHorizontal: SPACING.lg, gap: SPACING.sm, marginBottom: SPACING.lg },
   statCard:  { flex: 1, backgroundColor: COLORS.card, borderRadius: RADIUS.lg, padding: SPACING.md, alignItems: 'center', borderWidth: 1, ...SHADOWS.small },
-  statVal:   { fontSize: FONTS.sizes.xl, fontWeight: '700', color: COLORS.white },
+  statVal:   { fontSize: FONTS.sizes.xl, fontWeight: '700', color: COLORS.textPrimary },
   statLabel: { fontSize: FONTS.sizes.xs, color: COLORS.textSecondary, marginTop: 2 },
 
   section:      { paddingHorizontal: SPACING.lg, paddingBottom: SPACING.xl },
-  sectionTitle: { fontSize: FONTS.sizes.lg, fontWeight: '700', color: COLORS.white, marginBottom: SPACING.md },
+  sectionTitle: { fontSize: FONTS.sizes.lg, fontWeight: '700', color: COLORS.textPrimary, marginBottom: SPACING.md },
 
   emptyCard: { backgroundColor: COLORS.card, borderRadius: RADIUS.lg, padding: SPACING.lg, alignItems: 'center', borderWidth: 1, borderColor: COLORS.border },
   emptyText: { color: COLORS.textMuted, fontSize: FONTS.sizes.sm },
@@ -162,12 +162,12 @@ const styles = StyleSheet.create({
   timeBox:      { backgroundColor: COLORS.accent + '20', borderRadius: RADIUS.sm, padding: SPACING.sm, minWidth: 52, alignItems: 'center' },
   timeText:     { color: COLORS.accent, fontWeight: '700', fontSize: FONTS.sizes.sm },
   bookingInfo:  { flex: 1 },
-  customerName: { color: COLORS.white, fontWeight: '600', fontSize: FONTS.sizes.sm },
+  customerName: { color: COLORS.textPrimary, fontWeight: '600', fontSize: FONTS.sizes.sm },
   serviceName:  { color: COLORS.textSecondary, fontSize: FONTS.sizes.xs, marginTop: 2 },
   staffName:    { color: COLORS.textMuted, fontSize: FONTS.sizes.xs, marginTop: 1 },
   badge:        { paddingHorizontal: SPACING.sm, paddingVertical: 3, borderRadius: RADIUS.full },
   badgeText:    { fontSize: 10, fontWeight: '700', textTransform: 'uppercase' },
-  reviewTitle:   { fontSize: FONTS.sizes.lg, fontWeight: '700', color: COLORS.white, marginTop: SPACING.md, textAlign: 'center' },
+  reviewTitle:   { fontSize: FONTS.sizes.lg, fontWeight: '700', color: COLORS.textPrimary, marginTop: SPACING.md, textAlign: 'center' },
   reviewSubtext: { fontSize: FONTS.sizes.sm, color: COLORS.textSecondary, marginTop: SPACING.sm, textAlign: 'center', paddingHorizontal: SPACING.xl },
 });
 
