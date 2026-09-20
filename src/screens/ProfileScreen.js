@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, Modal, TextInput, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, Modal, TextInput, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONTS, SPACING, RADIUS, SHADOWS } from '../constants/theme';
 import { useAuth } from '../context/AuthContext';
 import { authAPI } from '../services/api';
+
+const MAX_NAME_LENGTH = 50;
 
 const ProfileScreen = () => {
   const { user, logout, updateUser } = useAuth();
@@ -12,10 +14,14 @@ const ProfileScreen = () => {
   const [saving, setSaving] = useState(false);
 
   const handleSaveName = async () => {
-    if (!nameInput.trim()) return Alert.alert('Error', 'Name cannot be empty');
+    const trimmedName = nameInput.trim();
+    if (!trimmedName) return Alert.alert('Error', 'Name cannot be empty');
+    if (trimmedName.length > MAX_NAME_LENGTH) {
+      return Alert.alert('Error', `Name must be under ${MAX_NAME_LENGTH} characters`);
+    }
     setSaving(true);
     try {
-      const res = await authAPI.updateProfile(nameInput.trim());
+      const res = await authAPI.updateProfile(trimmedName);
       await updateUser(res.data.data);
       setEditModal(false);
     } catch (err) {
@@ -35,7 +41,7 @@ const ProfileScreen = () => {
   const InfoRow = ({ icon, label, value }) => (
     <View style={styles.infoRow}>
       <View style={styles.infoIconWrap}>
-        <Ionicons name={icon} size={17} color={COLORS.accent} />
+        <Ionicons name={icon} size={17} color={COLORS.accent} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />
       </View>
       <View>
         <Text style={styles.infoLabel}>{label}</Text>
@@ -62,8 +68,10 @@ const ProfileScreen = () => {
             style={styles.editBadge}
             onPress={() => { setNameInput(user?.name || ''); setEditModal(true); }}
             activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel="Edit name"
           >
-            <Ionicons name="pencil" size={13} color={COLORS.white} />
+            <Ionicons name="pencil" size={13} color={COLORS.white} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />
           </TouchableOpacity>
         </View>
         <Text style={styles.userName}>{user?.name || 'User'}</Text>
@@ -83,13 +91,22 @@ const ProfileScreen = () => {
       </View>
 
       {/* Logout */}
-      <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout} activeOpacity={0.85}>
-        <Ionicons name="log-out-outline" size={18} color={COLORS.error} />
+      <TouchableOpacity
+        style={styles.logoutBtn}
+        onPress={handleLogout}
+        activeOpacity={0.85}
+        accessibilityRole="button"
+        accessibilityLabel="Log out"
+      >
+        <Ionicons name="log-out-outline" size={18} color={COLORS.error} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />
         <Text style={styles.logoutText}>Logout</Text>
       </TouchableOpacity>
 
       <Modal visible={editModal} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
+        <KeyboardAvoidingView
+          style={styles.modalOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>Edit Name</Text>
             <TextInput
@@ -98,6 +115,8 @@ const ProfileScreen = () => {
               onChangeText={setNameInput}
               placeholder="Your name"
               placeholderTextColor={COLORS.textMuted}
+              maxLength={MAX_NAME_LENGTH}
+              accessibilityLabel="Name input"
             />
             <View style={styles.modalBtns}>
               <TouchableOpacity style={[styles.modalBtn, { borderColor: COLORS.border }]} onPress={() => setEditModal(false)}>
@@ -108,7 +127,7 @@ const ProfileScreen = () => {
               </TouchableOpacity>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );
@@ -117,12 +136,12 @@ const ProfileScreen = () => {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   header:    { paddingHorizontal: SPACING.lg, paddingTop: SPACING.xl + 20, paddingBottom: SPACING.md },
-  title:     { fontSize: FONTS.sizes.xxl, fontWeight: '700', color: COLORS.white },
+  title:     { fontSize: FONTS.sizes.xxl, fontWeight: '700', color: COLORS.textPrimary },
 
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' },
   modalCard:    { backgroundColor: COLORS.card, borderTopLeftRadius: RADIUS.xl, borderTopRightRadius: RADIUS.xl, padding: SPACING.lg, paddingBottom: SPACING.xxl },
-  modalTitle:   { color: COLORS.white, fontSize: FONTS.sizes.xl, fontWeight: '700', marginBottom: SPACING.lg },
-  modalInput:   { backgroundColor: COLORS.background, borderRadius: RADIUS.md, padding: SPACING.md, color: COLORS.white, borderWidth: 1, borderColor: COLORS.border, marginBottom: SPACING.lg },
+  modalTitle:   { color: COLORS.textPrimary, fontSize: FONTS.sizes.xl, fontWeight: '700', marginBottom: SPACING.lg },
+  modalInput:   { backgroundColor: COLORS.background, borderRadius: RADIUS.md, padding: SPACING.md, color: COLORS.textPrimary, borderWidth: 1, borderColor: COLORS.border, marginBottom: SPACING.lg },
   modalBtns:    { flexDirection: 'row', gap: SPACING.sm },
   modalBtn:     { flex: 1, padding: SPACING.md, borderRadius: RADIUS.md, borderWidth: 1, alignItems: 'center' },
 
@@ -144,7 +163,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
     borderWidth: 2, borderColor: COLORS.background,
   },
-  userName:   { fontSize: FONTS.sizes.xl, fontWeight: '700', color: COLORS.white },
+  userName:   { fontSize: FONTS.sizes.xl, fontWeight: '700', color: COLORS.textPrimary },
   roleBadge:  { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: SPACING.xs, paddingHorizontal: SPACING.md, paddingVertical: 4, backgroundColor: COLORS.card, borderRadius: RADIUS.full, borderWidth: 1, borderColor: COLORS.border },
   roleText:   { color: COLORS.textSecondary, fontSize: FONTS.sizes.sm },
 
@@ -152,7 +171,7 @@ const styles = StyleSheet.create({
   infoRow:      { flexDirection: 'row', alignItems: 'center', gap: SPACING.md, paddingVertical: SPACING.sm },
   infoIconWrap: { width: 36, height: 36, borderRadius: 18, backgroundColor: COLORS.accent + '20', alignItems: 'center', justifyContent: 'center' },
   infoLabel:    { color: COLORS.textMuted, fontSize: FONTS.sizes.xs },
-  infoValue:    { color: COLORS.white, fontSize: FONTS.sizes.md, fontWeight: '500', marginTop: 2 },
+  infoValue:    { color: COLORS.textPrimary, fontSize: FONTS.sizes.md, fontWeight: '500', marginTop: 2 },
   divider:      { height: 1, backgroundColor: COLORS.border },
 
   logoutBtn:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginHorizontal: SPACING.lg, marginTop: SPACING.lg, padding: SPACING.md, borderRadius: RADIUS.md, borderWidth: 1.5, borderColor: COLORS.error },
