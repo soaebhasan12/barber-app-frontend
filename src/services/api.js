@@ -50,6 +50,10 @@ export const paymentAPI = {
   verify: (data) => api.post('/payments/verify', data),
 };
 
+export const reviewAPI = {
+  add: (data) => api.post('/reviews/add', data),
+};
+
 export const serviceAPI = {
   getByShop: (shopId) => api.get(`/services/${shopId}`),
   add:    (data) => api.post('/services/add', data),

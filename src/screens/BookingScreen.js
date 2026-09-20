@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, Alert, Modal, TextInput, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, Alert, Modal, TextInput, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { COLORS, FONTS, SPACING, RADIUS, SHADOWS } from '../constants/theme';
-import { bookingAPI } from '../services/api';
-import api from '../services/api';
+import { bookingAPI, reviewAPI } from '../services/api';
+
+const MAX_COMMENT_LENGTH = 500;
 
 const BookingScreen = () => {
   const [bookings, setBookings] = useState([]);
@@ -50,7 +51,7 @@ const BookingScreen = () => {
   const submitReview = async () => {
     setSubmitting(true);
     try {
-      await api.post('/reviews/add', {
+      await reviewAPI.add({
         bookingId: selectedBooking._id,
         rating,
         comment,
@@ -92,7 +93,7 @@ const BookingScreen = () => {
   const fetchSlotsForReschedule = async (date) => {
     setSlotsLoading(true);
     try {
-      const res = await api.get(`/bookings/slots?shopId=${rescheduleBooking.shopId._id}&date=${date}${rescheduleBooking.staffId ? `&staffId=${rescheduleBooking.staffId._id}` : ''}`);
+      const res = await bookingAPI.getSlots(rescheduleBooking.shopId._id, date, rescheduleBooking.staffId?._id);
       setSlots(res.data.data);
     } catch (err) {
       console.log('fetchSlots error:', err);
@@ -276,13 +277,19 @@ const BookingScreen = () => {
       )}
 
       <Modal visible={reviewModal} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
+        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>Rate your experience</Text>
             <Text style={styles.modalShop}>{selectedBooking?.shopId?.name}</Text>
             <View style={styles.starsRow}>
               {[1,2,3,4,5].map(star => (
-                <TouchableOpacity key={star} onPress={() => setRating(star)}>
+                <TouchableOpacity
+                  key={star}
+                  onPress={() => setRating(star)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Rate ${star} star${star > 1 ? 's' : ''}`}
+                  accessibilityState={{ selected: star === rating }}
+                >
                   <Text style={[styles.star, { color: star <= rating ? COLORS.warning : COLORS.border }]}>★</Text>
                 </TouchableOpacity>
               ))}
@@ -295,9 +302,11 @@ const BookingScreen = () => {
               onChangeText={setComment}
               multiline
               numberOfLines={3}
+              maxLength={MAX_COMMENT_LENGTH}
+              accessibilityLabel="Review comment"
             />
             <View style={styles.modalBtns}>
-              <TouchableOpacity style={[styles.modalBtn, { borderColor: COLORS.border }]} onPress={() => setReviewModal(false)}>
+              <TouchableOpacity style={[styles.modalBtn, { borderColor: COLORS.border }]} onPress={() => setReviewModal(false)} disabled={submitting}>
                 <Text style={{ color: COLORS.textSecondary }}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[styles.modalBtn, { backgroundColor: COLORS.accent }]} onPress={submitReview} disabled={submitting}>
@@ -305,7 +314,7 @@ const BookingScreen = () => {
               </TouchableOpacity>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       <Modal visible={rescheduleModal} transparent animationType="slide">
@@ -349,7 +358,7 @@ const BookingScreen = () => {
             )}
 
             <View style={[styles.modalBtns, { marginTop: SPACING.lg }]}>
-              <TouchableOpacity style={[styles.modalBtn, { borderColor: COLORS.border }]} onPress={() => setRescheduleModal(false)}>
+              <TouchableOpacity style={[styles.modalBtn, { borderColor: COLORS.border }]} onPress={() => setRescheduleModal(false)} disabled={rescheduling}>
                 <Text style={{ color: COLORS.textSecondary }}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[styles.modalBtn, { backgroundColor: COLORS.accent }]} onPress={confirmReschedule} disabled={!newSlot || rescheduling}>
@@ -367,12 +376,12 @@ const styles = StyleSheet.create({
   container:   { flex: 1, backgroundColor: COLORS.background },
   center:      { flex: 1, alignItems: 'center', justifyContent: 'center' },
   header:      { paddingHorizontal: SPACING.lg, paddingTop: SPACING.xl + 20, paddingBottom: SPACING.md },
-  title:       { fontSize: FONTS.sizes.xxl, fontWeight: '700', color: COLORS.white },
+  title:       { fontSize: FONTS.sizes.xxl, fontWeight: '700', color: COLORS.textPrimary },
   list:        { padding: SPACING.lg, paddingBottom: 100 },
 
   card:        { backgroundColor: COLORS.card, borderRadius: RADIUS.lg, padding: SPACING.md, marginBottom: SPACING.md, borderWidth: 1, borderColor: COLORS.border, overflow: 'hidden', ...SHADOWS.small },
   cardHeader:  { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACING.sm },
-  shopName:    { fontSize: FONTS.sizes.md, fontWeight: '700', color: COLORS.white, flex: 1 },
+  shopName:    { fontSize: FONTS.sizes.md, fontWeight: '700', color: COLORS.textPrimary, flex: 1 },
   statusBadge: { paddingHorizontal: SPACING.sm, paddingVertical: 3, borderRadius: RADIUS.full },
   statusText:  { fontSize: FONTS.sizes.xs, fontWeight: '700' },
   divider:     { height: 1, backgroundColor: COLORS.border, marginBottom: SPACING.sm },
@@ -384,7 +393,7 @@ const styles = StyleSheet.create({
   paidBadgeText: { color: COLORS.success, fontSize: FONTS.sizes.xs, fontWeight: '700' },
 
   emptyEmoji:   { fontSize: 48, marginBottom: SPACING.md },
-  emptyText:    { color: COLORS.white, fontSize: FONTS.sizes.lg, fontWeight: '600' },
+  emptyText:    { color: COLORS.textPrimary, fontSize: FONTS.sizes.lg, fontWeight: '600' },
   emptySubtext: { color: COLORS.textSecondary, fontSize: FONTS.sizes.sm, marginTop: 4 },
 
   reviewBtn:     { marginTop: SPACING.sm, padding: SPACING.sm, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.warning, alignItems: 'center' },
@@ -399,7 +408,7 @@ const styles = StyleSheet.create({
   dateCardActive:    { backgroundColor: COLORS.accent, borderColor: COLORS.accent },
   dateDay:           { color: COLORS.textSecondary, fontSize: FONTS.sizes.xs },
   dateDayActive:     { color: COLORS.white },
-  dateNum:           { color: COLORS.white, fontSize: FONTS.sizes.lg, fontWeight: '700', marginTop: 2 },
+  dateNum:           { color: COLORS.textPrimary, fontSize: FONTS.sizes.lg, fontWeight: '700', marginTop: 2 },
   dateNumActive:     { color: COLORS.white },
   slotsGrid:         { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm, marginBottom: SPACING.md },
   slotChip:          { paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border, backgroundColor: COLORS.background },
@@ -410,11 +419,11 @@ const styles = StyleSheet.create({
 
   modalOverlay:  { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' },
   modalCard:     { backgroundColor: COLORS.card, borderTopLeftRadius: RADIUS.xl, borderTopRightRadius: RADIUS.xl, padding: SPACING.lg, paddingBottom: SPACING.xxl },
-  modalTitle:    { color: COLORS.white, fontSize: FONTS.sizes.xl, fontWeight: '700', marginBottom: 4 },
+  modalTitle:    { color: COLORS.textPrimary, fontSize: FONTS.sizes.xl, fontWeight: '700', marginBottom: 4 },
   modalShop:     { color: COLORS.textSecondary, fontSize: FONTS.sizes.sm, marginBottom: SPACING.lg },
   starsRow:      { flexDirection: 'row', gap: SPACING.sm, marginBottom: SPACING.lg },
   star:          { fontSize: 36 },
-  commentInput:  { backgroundColor: COLORS.background, borderRadius: RADIUS.md, padding: SPACING.md, color: COLORS.white, borderWidth: 1, borderColor: COLORS.border, marginBottom: SPACING.lg, minHeight: 80, textAlignVertical: 'top' },
+  commentInput:  { backgroundColor: COLORS.background, borderRadius: RADIUS.md, padding: SPACING.md, color: COLORS.textPrimary, borderWidth: 1, borderColor: COLORS.border, marginBottom: SPACING.lg, minHeight: 80, textAlignVertical: 'top' },
   modalBtns:     { flexDirection: 'row', gap: SPACING.sm },
   modalBtn:      { flex: 1, padding: SPACING.md, borderRadius: RADIUS.md, borderWidth: 1, alignItems: 'center' },
 });
