@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity, RefreshControl } from 'react-native';
 import { COLORS, FONTS, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
 import { bookingAPI, shopAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
@@ -12,6 +12,8 @@ const OwnerDashboardScreen = () => {
   const [shop, setShop]         = useState(null);
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading]   = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError]       = useState(null);
   const today = new Date().toISOString().split('T')[0];
 
   useFocusEffect(
@@ -21,6 +23,7 @@ const OwnerDashboardScreen = () => {
   );
 
   const fetchData = async () => {
+    setError(null);
     try {
       const shopRes = await shopAPI.getMyShop();
       const shopData = shopRes.data.data.shop;
@@ -29,9 +32,16 @@ const OwnerDashboardScreen = () => {
       setBookings(bookingRes.data.data);
     } catch (err) {
       console.log('fetchData error:', err);
+      setError('Failed to load dashboard. Pull down to retry.');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
+  };
+
+  const handleRefresh = () => {
+    setRefreshing(true);
+    fetchData();
   };
 
   if (!loading && shop && shop.verificationStatus !== 'approved') {
@@ -60,13 +70,30 @@ const OwnerDashboardScreen = () => {
     </View>
   );
 
+  if (error && !shop) return (
+    <View style={styles.center}>
+      <Ionicons name="alert-circle-outline" size={48} color={COLORS.error} />
+      <Text style={styles.reviewTitle}>Something went wrong</Text>
+      <Text style={styles.reviewSubtext}>{error}</Text>
+      <TouchableOpacity style={styles.retryBtn} onPress={fetchData} activeOpacity={0.85}>
+        <Text style={styles.retryBtnText}>Retry</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
   const pending   = bookings.filter(b => b.status === 'pending').length;
   const confirmed = bookings.filter(b => b.status === 'confirmed').length;
   const completed = bookings.filter(b => b.status === 'completed').length;
   const revenue   = bookings.filter(b => b.status === 'completed').reduce((sum, b) => sum + b.amount, 0);
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+    <ScrollView
+      style={styles.container}
+      showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={[COLORS.accent]} tintColor={COLORS.accent} />
+      }
+    >
       {/* Header */}
       <View style={styles.header}>
         <View>
@@ -81,24 +108,36 @@ const OwnerDashboardScreen = () => {
 
       {/* Stats */}
       <View style={styles.statsGrid}>
-        <View style={[styles.statCard, { borderColor: COLORS.warning + '60' }]}>
-          <Text style={styles.statVal}>{pending}</Text>
-          <Text style={styles.statLabel}>Pending</Text>
+        <View style={styles.statsRow}>
+          <View style={[styles.statCard, { borderColor: COLORS.warning + '60' }]}>
+            <Text style={styles.statVal}>{pending}</Text>
+            <Text style={styles.statLabel}>Pending</Text>
+          </View>
+          <View style={[styles.statCard, { borderColor: COLORS.success + '60' }]}>
+            <Text style={[styles.statVal, { color: COLORS.success }]}>{confirmed}</Text>
+            <Text style={styles.statLabel}>Confirmed</Text>
+          </View>
         </View>
-        <View style={[styles.statCard, { borderColor: COLORS.success + '60' }]}>
-          <Text style={[styles.statVal, { color: COLORS.success }]}>{confirmed}</Text>
-          <Text style={styles.statLabel}>Confirmed</Text>
-        </View>
-        <View style={[styles.statCard, { borderColor: COLORS.accent + '60' }]}>
-          <Text style={[styles.statVal, { color: COLORS.accent }]}>₹{revenue}</Text>
-          <Text style={styles.statLabel}>Revenue</Text>
+        <View style={styles.statsRow}>
+          <View style={[styles.statCard, { borderColor: COLORS.accent + '60' }]}>
+            <Text style={[styles.statVal, { color: COLORS.accent }]}>₹{revenue}</Text>
+            <Text style={styles.statLabel}>Revenue</Text>
+          </View>
+          <View style={[styles.statCard, { borderColor: COLORS.categoryMen + '60' }]}>
+            <Text style={[styles.statVal, { color: COLORS.categoryMen }]}>{completed}</Text>
+            <Text style={styles.statLabel}>Completed</Text>
+          </View>
         </View>
       </View>
 
       {/* Today's Bookings */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Today's Bookings</Text>
-        {bookings.length === 0 ? (
+        {error ? (
+          <View style={styles.emptyCard}>
+            <Text style={styles.emptyText}>{error}</Text>
+          </View>
+        ) : bookings.length === 0 ? (
           <View style={styles.emptyCard}>
             <Text style={styles.emptyText}>No bookings today</Text>
           </View>
@@ -147,7 +186,8 @@ const styles = StyleSheet.create({
   shopName:  { fontSize: FONTS.sizes.xl, fontWeight: '700', color: COLORS.textPrimary, marginTop: 2 },
   statusDot: { width: 12, height: 12, borderRadius: 6 },
 
-  statsGrid: { flexDirection: 'row', paddingHorizontal: SPACING.lg, gap: SPACING.sm, marginBottom: SPACING.lg },
+  statsGrid: { paddingHorizontal: SPACING.lg, gap: SPACING.sm, marginBottom: SPACING.lg },
+  statsRow:  { flexDirection: 'row', gap: SPACING.sm },
   statCard:  { flex: 1, backgroundColor: COLORS.card, borderRadius: RADIUS.lg, padding: SPACING.md, alignItems: 'center', borderWidth: 1, ...SHADOWS.small },
   statVal:   { fontSize: FONTS.sizes.xl, fontWeight: '700', color: COLORS.textPrimary },
   statLabel: { fontSize: FONTS.sizes.xs, color: COLORS.textSecondary, marginTop: 2 },
@@ -169,6 +209,8 @@ const styles = StyleSheet.create({
   badgeText:    { fontSize: 10, fontWeight: '700', textTransform: 'uppercase' },
   reviewTitle:   { fontSize: FONTS.sizes.lg, fontWeight: '700', color: COLORS.textPrimary, marginTop: SPACING.md, textAlign: 'center' },
   reviewSubtext: { fontSize: FONTS.sizes.sm, color: COLORS.textSecondary, marginTop: SPACING.sm, textAlign: 'center', paddingHorizontal: SPACING.xl },
+  retryBtn:      { marginTop: SPACING.lg, paddingHorizontal: SPACING.xl, paddingVertical: SPACING.sm, borderRadius: RADIUS.md, backgroundColor: COLORS.accent },
+  retryBtnText:  { color: COLORS.white, fontWeight: '600', fontSize: FONTS.sizes.sm },
 });
 
 export default OwnerDashboardScreen;
