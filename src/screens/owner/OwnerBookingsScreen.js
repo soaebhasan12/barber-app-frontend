@@ -213,8 +213,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   center:    { flex: 1, alignItems: 'center', justifyContent: 'center' },
   header:    { paddingHorizontal: SPACING.lg, paddingTop: SPACING.xl + 20, paddingBottom: SPACING.md },
-  title:     { fontSize: FONTS.sizes.xxl, fontWeight: '700', color: COLORS.white },
-
+  title:     { fontSize: FONTS.sizes.xxl, fontWeight: '700', color: COLORS.textPrimary },
   filterGrid:            { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: SPACING.lg, marginBottom: SPACING.md, gap: SPACING.sm },
   filterTile:            { flexBasis: '47%', flexGrow: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: COLORS.card, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border, paddingVertical: SPACING.sm, paddingHorizontal: SPACING.md },
   filterTileActive:      { backgroundColor: COLORS.accent + '20', borderColor: COLORS.accent },
@@ -237,8 +236,7 @@ const styles = StyleSheet.create({
   timeBoxToday: { borderWidth: 1, borderColor: COLORS.accent },
   todayTag:     { color: COLORS.accent, fontSize: 9, fontWeight: '700', letterSpacing: 0.5, marginBottom: 1 },
 
-  customerName: { color: COLORS.white, fontWeight: '700', fontSize: FONTS.sizes.md },
-  customerPhone:{ color: COLORS.textSecondary, fontSize: FONTS.sizes.xs, marginTop: 2 },
+  customerName: { color: COLORS.textPrimary, fontWeight: '700', fontSize: FONTS.sizes.md },  customerPhone:{ color: COLORS.textSecondary, fontSize: FONTS.sizes.xs, marginTop: 2 },
   timeBox:      { backgroundColor: COLORS.accent + '20', borderRadius: RADIUS.md, padding: SPACING.sm, alignItems: 'center' },
   timeText:     { color: COLORS.accent, fontWeight: '700', fontSize: FONTS.sizes.md },
   dateText:     { color: COLORS.textSecondary, fontSize: FONTS.sizes.xs, marginTop: 2 },
