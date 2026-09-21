@@ -11,6 +11,8 @@ const OwnerBookingsScreen = () => {
   const [loading, setLoading]   = useState(true);
   const [shopId, setShopId]     = useState(null);
   const [filter, setFilter]     = useState('pending');
+  const [error, setError]       = useState(null);
+  const [updatingId, setUpdatingId] = useState(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -19,6 +21,7 @@ const OwnerBookingsScreen = () => {
   );
 
   const fetchShopAndBookings = async () => {
+    setError(null);
     try {
       const shopRes = await shopAPI.getMyShop();
       const id = shopRes.data.data.shop._id;
@@ -27,6 +30,7 @@ const OwnerBookingsScreen = () => {
       setBookings(res.data.data);
     } catch (err) {
       console.log('error:', err);
+      setError('Failed to load bookings. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -39,21 +43,23 @@ const OwnerBookingsScreen = () => {
       { text: 'No', style: 'cancel' },
       {
         text: 'Yes', onPress: async () => {
+          setUpdatingId(bookingId);
           try {
             if (status === 'cancelled') {
               await bookingAPI.cancel(bookingId, 'Cancelled by owner');
             } else {
               await bookingAPI.updateStatus(bookingId, status);
             }
-            fetchShopAndBookings();
+            await fetchShopAndBookings();
           } catch (err) {
-            Alert.alert('Error', 'Failed to update booking');
+            Alert.alert('Error', err.response?.data?.message || 'Failed to update booking');
+          } finally {
+            setUpdatingId(null);
           }
         }
       }
     ]);
   };
-
   const filtered = bookings.filter(b => b.status === filter);
 
   const counts = ['pending', 'confirmed', 'completed', 'cancelled', 'no_show'].reduce((acc, f) => {
@@ -114,11 +120,21 @@ const OwnerBookingsScreen = () => {
 
         {item.status === 'pending' && (
           <View style={styles.actionsWrap}>
-            <TouchableOpacity style={styles.primaryBtn} onPress={() => updateStatus(item._id, 'confirmed')} activeOpacity={0.85}>
-              <Ionicons name="checkmark-circle" size={16} color={COLORS.white} />
-              <Text style={styles.primaryBtnText}>Accept Booking</Text>
+            <TouchableOpacity
+              style={[styles.primaryBtn, updatingId === item._id && styles.btnDisabled]}
+              onPress={() => updateStatus(item._id, 'confirmed')}
+              activeOpacity={0.85}
+              disabled={updatingId === item._id}
+            >
+              {updatingId === item._id
+                ? <ActivityIndicator size="small" color={COLORS.white} />
+                : <>
+                    <Ionicons name="checkmark-circle" size={16} color={COLORS.white} />
+                    <Text style={styles.primaryBtnText}>Accept Booking</Text>
+                  </>
+              }
             </TouchableOpacity>
-            <TouchableOpacity style={styles.declineLink} onPress={() => updateStatus(item._id, 'cancelled')}>
+            <TouchableOpacity style={styles.declineLink} onPress={() => updateStatus(item._id, 'cancelled')} disabled={updatingId === item._id}>
               <Text style={styles.declineLinkText}>Decline</Text>
             </TouchableOpacity>
           </View>
@@ -126,17 +142,27 @@ const OwnerBookingsScreen = () => {
 
         {item.status === 'confirmed' && (
           <View style={styles.actionsWrap}>
-            <TouchableOpacity style={[styles.primaryBtn, { backgroundColor: COLORS.success }]} onPress={() => updateStatus(item._id, 'completed')} activeOpacity={0.85}>
-              <Ionicons name="checkmark-circle" size={16} color={COLORS.white} />
-              <Text style={styles.primaryBtnText}>Mark Complete</Text>
+            <TouchableOpacity
+              style={[styles.primaryBtn, { backgroundColor: COLORS.success }, updatingId === item._id && styles.btnDisabled]}
+              onPress={() => updateStatus(item._id, 'completed')}
+              activeOpacity={0.85}
+              disabled={updatingId === item._id}
+            >
+              {updatingId === item._id
+                ? <ActivityIndicator size="small" color={COLORS.white} />
+                : <>
+                    <Ionicons name="checkmark-circle" size={16} color={COLORS.white} />
+                    <Text style={styles.primaryBtnText}>Mark Complete</Text>
+                  </>
+              }
             </TouchableOpacity>
             <View style={styles.secondaryRow}>
-              <TouchableOpacity style={styles.iconTextRow} onPress={() => updateStatus(item._id, 'no_show')}>
+              <TouchableOpacity style={styles.iconTextRow} onPress={() => updateStatus(item._id, 'no_show')} disabled={updatingId === item._id}>
                 <Ionicons name="warning-outline" size={13} color={COLORS.warning} />
                 <Text style={styles.secondaryLinkWarn}>No-Show</Text>
               </TouchableOpacity>
               <Text style={styles.secondaryDot}>•</Text>
-              <TouchableOpacity style={styles.iconTextRow} onPress={() => updateStatus(item._id, 'cancelled')}>
+              <TouchableOpacity style={styles.iconTextRow} onPress={() => updateStatus(item._id, 'cancelled')} disabled={updatingId === item._id}>
                 <Ionicons name="close-circle-outline" size={13} color={COLORS.error} />
                 <Text style={styles.secondaryLinkError}>Cancel</Text>
               </TouchableOpacity>
@@ -168,28 +194,40 @@ const OwnerBookingsScreen = () => {
 
       {/* Filter Tabs */}
       <View style={styles.filterGrid}>
-        {['pending', 'confirmed', 'completed', 'cancelled', 'no_show'].map(f => (
-          <TouchableOpacity
-            key={f}
-            style={[styles.filterTile, filter === f && styles.filterTileActive]}
-            onPress={() => setFilter(f)}
-            activeOpacity={0.85}
-          >
-            <Text style={[styles.filterTileText, filter === f && styles.filterTileTextActive]}>
-              {f === 'no_show' ? 'No-Show' : f.charAt(0).toUpperCase() + f.slice(1)}
-            </Text>
-            {counts[f] > 0 && (
-              <View style={[styles.filterTileCount, filter === f && styles.filterTileCountActive]}>
-                <Text style={[styles.filterTileCountText, filter === f && styles.filterTileCountTextActive]}>{counts[f]}</Text>
-              </View>
-            )}
-          </TouchableOpacity>
+        {[['pending', 'confirmed'], ['completed', 'cancelled'], ['no_show']].map((row, i) => (
+          <View style={styles.filterRow} key={i}>
+            {row.map(f => (
+              <TouchableOpacity
+                key={f}
+                style={[styles.filterTile, filter === f && styles.filterTileActive]}
+                onPress={() => setFilter(f)}
+                activeOpacity={0.85}
+              >
+                <Text style={[styles.filterTileText, filter === f && styles.filterTileTextActive]}>
+                  {f === 'no_show' ? 'No-Show' : f.charAt(0).toUpperCase() + f.slice(1)}
+                </Text>
+                {counts[f] > 0 && (
+                  <View style={[styles.filterTileCount, filter === f && styles.filterTileCountActive]}>
+                    <Text style={[styles.filterTileCountText, filter === f && styles.filterTileCountTextActive]}>{counts[f]}</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            ))}
+          </View>
         ))}
       </View>
 
       {loading ? (
         <View style={styles.center}>
           <ActivityIndicator color={COLORS.accent} />
+        </View>
+      ) : error ? (
+        <View style={styles.center}>
+          <Ionicons name="alert-circle-outline" size={48} color={COLORS.error} />
+          <Text style={styles.emptyText}>{error}</Text>
+          <TouchableOpacity style={styles.retryBtn} onPress={fetchShopAndBookings} activeOpacity={0.85}>
+            <Text style={styles.retryBtnText}>Retry</Text>
+          </TouchableOpacity>
         </View>
       ) : filtered.length === 0 ? (
         <View style={styles.center}>
@@ -214,8 +252,9 @@ const styles = StyleSheet.create({
   center:    { flex: 1, alignItems: 'center', justifyContent: 'center' },
   header:    { paddingHorizontal: SPACING.lg, paddingTop: SPACING.xl + 20, paddingBottom: SPACING.md },
   title:     { fontSize: FONTS.sizes.xxl, fontWeight: '700', color: COLORS.textPrimary },
-  filterGrid:            { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: SPACING.lg, marginBottom: SPACING.md, gap: SPACING.sm },
-  filterTile:            { flexBasis: '47%', flexGrow: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: COLORS.card, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border, paddingVertical: SPACING.sm, paddingHorizontal: SPACING.md },
+  filterGrid:            { paddingHorizontal: SPACING.lg, marginBottom: SPACING.md, gap: SPACING.sm },
+  filterRow:             { flexDirection: 'row', gap: SPACING.sm },
+  filterTile:            { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: COLORS.card, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border, paddingVertical: SPACING.sm, paddingHorizontal: SPACING.md },
   filterTileActive:      { backgroundColor: COLORS.accent + '20', borderColor: COLORS.accent },
   filterTileText:        { color: COLORS.textSecondary, fontSize: FONTS.sizes.sm, fontWeight: '600',  },
   filterTileTextActive:  { color: COLORS.accent },
@@ -258,13 +297,12 @@ const styles = StyleSheet.create({
   secondaryLinkError: { color: COLORS.error, fontSize: FONTS.sizes.xs, fontWeight: '600' },
   secondaryDot:       { color: COLORS.textMuted, fontSize: FONTS.sizes.xs },
 
-  actions:        { flexDirection: 'row', gap: SPACING.sm, marginTop: SPACING.sm },
-  actionBtn:      { flex: 1, paddingVertical: SPACING.sm, borderRadius: RADIUS.md, borderWidth: 1.5, alignItems: 'center' },
-  actionBtnText:  { fontWeight: '700', fontSize: FONTS.sizes.sm },
   finalStatus:    { fontSize: FONTS.sizes.sm, fontWeight: '700', marginTop: SPACING.xs },
 
-  emptyEmoji: { fontSize: 48, marginBottom: SPACING.md },
   emptyText:  { color: COLORS.textSecondary, fontSize: FONTS.sizes.md },
+  retryBtn:      { marginTop: SPACING.lg, paddingHorizontal: SPACING.xl, paddingVertical: SPACING.sm, borderRadius: RADIUS.md, backgroundColor: COLORS.accent },
+  retryBtnText:  { color: COLORS.white, fontWeight: '600', fontSize: FONTS.sizes.sm },
+  btnDisabled:   { opacity: 0.5 },
 });
 
 export default OwnerBookingsScreen;
