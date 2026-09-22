@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import * as Location from 'expo-location';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator, Image, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, Image } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { COLORS, FONTS, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
 import { shopAPI, serviceAPI, staffAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
@@ -132,6 +133,12 @@ const OwnerShopScreen = () => {
       if (newService.name.trim().length < 2) {
         return Alert.alert('Error', 'Service name must be at least 2 characters');
       }
+      const isDuplicateServiceName = services.some(s =>
+        s.name.trim().toLowerCase() === newService.name.trim().toLowerCase() && s._id !== editingServiceId
+      );
+      if (isDuplicateServiceName) {
+        return Alert.alert('Error', 'A service with this name already exists');
+      }
       const priceNum = Number(newService.price);
       const durationNum = Number(newService.durationMin);
       if (isNaN(priceNum) || priceNum <= 0) {
@@ -201,6 +208,18 @@ const OwnerShopScreen = () => {
     }
     if (newStaff.phone && !isValidPhone(newStaff.phone)) {
       return Alert.alert('Error', 'Phone number must be exactly 10 digits');
+    }
+    const isDuplicateStaffName = staff.some(s =>
+      s.name.trim().toLowerCase() === newStaff.name.trim().toLowerCase() && s._id !== editingStaffId
+    );
+    if (isDuplicateStaffName) {
+      return Alert.alert('Error', 'A staff member with this name already exists');
+    }
+    const isDuplicateStaffPhone = newStaff.phone && staff.some(s =>
+      s.phone === newStaff.phone && s._id !== editingStaffId
+    );
+    if (isDuplicateStaffPhone) {
+      return Alert.alert('Error', 'A staff member with this phone number already exists');
     }
     setAddingStaff(true);
     try {
@@ -353,8 +372,13 @@ const OwnerShopScreen = () => {
   );
 
   if (!shop) return (
-    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-    <ScrollView contentContainerStyle={{ padding: SPACING.lg, paddingTop: SPACING.xl + 20, paddingBottom: SPACING.xl + 40 }}>
+    <KeyboardAwareScrollView
+      style={styles.container}
+      contentContainerStyle={{ padding: SPACING.lg, paddingTop: SPACING.xl + 20, paddingBottom: SPACING.xl + 40 }}
+      enableOnAndroid
+      extraScrollHeight={20}
+      keyboardShouldPersistTaps="handled"
+    >
       <Text style={styles.title}>Register Your Shop</Text>
       <View style={[styles.formCard, { marginTop: SPACING.lg }]}>
         <Input label="Shop Name" value={regForm.name} onChangeText={t => setRegForm({ ...regForm, name: t })} placeholder="e.g. Harun Barber Shop" maxLength={100} />
@@ -444,12 +468,11 @@ const OwnerShopScreen = () => {
           loading={registering}
         />
       </View>
-    </ScrollView>
-    </KeyboardAvoidingView>
+    </KeyboardAwareScrollView>
   );
 
   return (
-    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+    <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Shop Settings</Text>
         <TouchableOpacity onPress={() => Alert.alert('Logout', 'Are you sure?', [
@@ -502,7 +525,7 @@ const OwnerShopScreen = () => {
         ))}
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+      <KeyboardAwareScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll} enableOnAndroid extraScrollHeight={20} keyboardShouldPersistTaps="handled">
 
         {/* Services Tab */}
         {tab === 'services' && (
@@ -612,8 +635,8 @@ const OwnerShopScreen = () => {
         )}
 
         <View style={{ height: 100 }} />
-      </ScrollView>
-    </KeyboardAvoidingView>
+      </KeyboardAwareScrollView>
+    </View>
   );
 };
 
