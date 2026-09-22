@@ -42,6 +42,7 @@ const OwnerShopScreen = () => {
   );
 
   const isValidTime = (t) => /^([01]\d|2[0-3]):([0-5]\d)$/.test(t);
+  const isValidPhone = (p) => /^\d{10}$/.test(p);
   
   const [regImages, setRegImages] = useState([]); // local URIs, pre-upload
   const [uploadingImages, setUploadingImages] = useState(false);
@@ -128,6 +129,9 @@ const OwnerShopScreen = () => {
       if (!newService.name || !newService.price || !newService.durationMin) {
         return Alert.alert('Error', 'Please fill all fields');
       }
+      if (newService.name.trim().length < 2) {
+        return Alert.alert('Error', 'Service name must be at least 2 characters');
+      }
       const priceNum = Number(newService.price);
       const durationNum = Number(newService.durationMin);
       if (isNaN(priceNum) || priceNum <= 0) {
@@ -192,7 +196,12 @@ const OwnerShopScreen = () => {
   };
 
   const handleAddStaff = async () => {
-    if (!newStaff.name) return Alert.alert('Error', 'Please enter staff name');
+    if (!newStaff.name.trim() || newStaff.name.trim().length < 2) {
+      return Alert.alert('Error', 'Please enter a valid staff name (at least 2 characters)');
+    }
+    if (newStaff.phone && !isValidPhone(newStaff.phone)) {
+      return Alert.alert('Error', 'Phone number must be exactly 10 digits');
+    }
     setAddingStaff(true);
     try {
       if (editingStaffId) {
@@ -250,6 +259,12 @@ const OwnerShopScreen = () => {
     if (!regForm.name.trim() || !regForm.phone.trim() || !regForm.address.trim()) {
       return Alert.alert('Error', 'Please fill all fields');
     }
+    if (regForm.name.trim().length < 2) {
+      return Alert.alert('Error', 'Shop name must be at least 2 characters');
+    }
+    if (!isValidPhone(regForm.phone)) {
+      return Alert.alert('Error', 'Phone number must be exactly 10 digits');
+    }
 
     let lat, lng;
     try {
@@ -300,6 +315,12 @@ const OwnerShopScreen = () => {
   const handleSaveShopInfo = async () => {
     if (!shopInfo.name.trim() || !shopInfo.phone.trim() || !shopInfo.address.trim()) {
       return Alert.alert('Error', 'Please fill all fields');
+    }
+    if (shopInfo.name.trim().length < 2) {
+      return Alert.alert('Error', 'Shop name must be at least 2 characters');
+    }
+    if (!isValidPhone(shopInfo.phone)) {
+      return Alert.alert('Error', 'Phone number must be exactly 10 digits');
     }
     setSavingShopInfo(true);
     try {
