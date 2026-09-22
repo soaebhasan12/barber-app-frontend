@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import * as Location from 'expo-location';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator, Image, KeyboardAvoidingView, Platform } from 'react-native';
 import { COLORS, FONTS, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
 import { shopAPI, serviceAPI, staffAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
@@ -332,11 +332,12 @@ const OwnerShopScreen = () => {
   );
 
   if (!shop) return (
-    <ScrollView style={styles.container} contentContainerStyle={{ padding: SPACING.lg, paddingTop: SPACING.xl + 20, paddingBottom: SPACING.xl + 40 }}>
+    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+    <ScrollView contentContainerStyle={{ padding: SPACING.lg, paddingTop: SPACING.xl + 20, paddingBottom: SPACING.xl + 40 }}>
       <Text style={styles.title}>Register Your Shop</Text>
       <View style={[styles.formCard, { marginTop: SPACING.lg }]}>
-        <Input label="Shop Name" value={regForm.name} onChangeText={t => setRegForm({ ...regForm, name: t })} placeholder="e.g. Harun Barber Shop" />
-        <Input label="Phone" value={regForm.phone} onChangeText={t => setRegForm({ ...regForm, phone: t })} placeholder="10-digit number" keyboardType="phone-pad" />
+        <Input label="Shop Name" value={regForm.name} onChangeText={t => setRegForm({ ...regForm, name: t })} placeholder="e.g. Harun Barber Shop" maxLength={100} />
+        <Input label="Phone" value={regForm.phone} onChangeText={t => setRegForm({ ...regForm, phone: t.replace(/\D/g, '') })} placeholder="10-digit number" keyboardType="phone-pad" maxLength={10} />
         <Input label="Address" value={regForm.address} onChangeText={t => setRegForm({ ...regForm, address: t })} placeholder="Shop address" />
 
         <Text style={[styles.itemMeta, { marginBottom: SPACING.xs, marginTop: SPACING.sm }]}>Shop Photos ({regImages.length}/5)</Text>
@@ -415,7 +416,7 @@ const OwnerShopScreen = () => {
             </TouchableOpacity>
           </View>
         ))}
-
+    
         <Button
           title={uploadingImages ? 'Uploading photos...' : 'Register Shop'}
           onPress={handleRegisterShop}
@@ -423,10 +424,11 @@ const OwnerShopScreen = () => {
         />
       </View>
     </ScrollView>
+    </KeyboardAvoidingView>
   );
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <View style={styles.header}>
         <Text style={styles.title}>Shop Settings</Text>
         <TouchableOpacity onPress={() => Alert.alert('Logout', 'Are you sure?', [
@@ -506,7 +508,7 @@ const OwnerShopScreen = () => {
 
             {showServiceForm ? (
               <View style={styles.formCard}>
-                <Input label="Service Name"    value={newService.name}        onChangeText={t => setNewService({ ...newService, name: t })}        placeholder="e.g. Haircut" />
+                <Input label="Service Name"    value={newService.name}        onChangeText={t => setNewService({ ...newService, name: t })}        placeholder="e.g. Haircut" maxLength={50} />
                 <Input label="Price (₹)"       value={newService.price}       onChangeText={t => setNewService({ ...newService, price: t })}       placeholder="e.g. 150" keyboardType="number-pad" />
                 <Input label="Duration (mins)" value={newService.durationMin} onChangeText={t => setNewService({ ...newService, durationMin: t })} placeholder="e.g. 30"  keyboardType="number-pad" />
                 <View style={{ flexDirection: 'row', gap: SPACING.sm }}>
@@ -547,8 +549,8 @@ const OwnerShopScreen = () => {
 
             {showStaffForm ? (
               <View style={styles.formCard}>
-                <Input label="Staff Name"  value={newStaff.name}  onChangeText={t => setNewStaff({ ...newStaff, name: t })}  placeholder="e.g. Rahul" />
-                <Input label="Phone"       value={newStaff.phone} onChangeText={t => setNewStaff({ ...newStaff, phone: t })} placeholder="10-digit number" keyboardType="phone-pad" />
+                <Input label="Staff Name"  value={newStaff.name}  onChangeText={t => setNewStaff({ ...newStaff, name: t })}  placeholder="e.g. Rahul" maxLength={50} />
+                <Input label="Phone"       value={newStaff.phone} onChangeText={t => setNewStaff({ ...newStaff, phone: t.replace(/\D/g, '') })} placeholder="10-digit number" keyboardType="phone-pad" maxLength={10} />
                 <View style={{ flexDirection: 'row', gap: SPACING.sm }}>
                   <Button title={editingStaffId ? 'Update' : 'Add'} onPress={handleAddStaff} loading={addingStaff} style={{ flex: 1 }} />
                   <Button title="Cancel" onPress={() => { setShowStaffForm(false); setEditingStaffId(null); setNewStaff({ name: '', phone: '' }); }} variant="outline" style={{ flex: 1 }} />
@@ -565,8 +567,8 @@ const OwnerShopScreen = () => {
         {/* Info Tab */}
         {tab === 'info' && (
           <View style={styles.formCard}>
-            <Input label="Shop Name" value={shopInfo.name} onChangeText={t => setShopInfo({ ...shopInfo, name: t })} placeholder="e.g. Harun Barber Shop" />
-            <Input label="Phone" value={shopInfo.phone} onChangeText={t => setShopInfo({ ...shopInfo, phone: t })} placeholder="10-digit number" keyboardType="phone-pad" />
+            <Input label="Shop Name" value={shopInfo.name} onChangeText={t => setShopInfo({ ...shopInfo, name: t })} placeholder="e.g. Harun Barber Shop" maxLength={100} />
+            <Input label="Phone" value={shopInfo.phone} onChangeText={t => setShopInfo({ ...shopInfo, phone: t.replace(/\D/g, '') })} placeholder="10-digit number" keyboardType="phone-pad" maxLength={10} />
             <Input label="Address" value={shopInfo.address} onChangeText={t => setShopInfo({ ...shopInfo, address: t })} placeholder="Shop address" />
 
             <Text style={[styles.itemMeta, { marginBottom: SPACING.xs, marginTop: 4 }]}>Category</Text>
@@ -590,7 +592,7 @@ const OwnerShopScreen = () => {
 
         <View style={{ height: 100 }} />
       </ScrollView>
-    </View>
+    </KeyboardAvoidingView>
   );
 };
 
