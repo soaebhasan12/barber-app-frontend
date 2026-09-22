@@ -16,6 +16,8 @@ const OwnerShopScreen = () => {
   const [staff, setStaff]       = useState([]);
   const [loading, setLoading]   = useState(true);
   const [tab, setTab]           = useState('services');
+  const [fetchError, setFetchError] = useState(null);
+  const [removingId, setRemovingId] = useState(null);
 
   // New service form
   const [newService, setNewService] = useState({ name: '', price: '', durationMin: '' });
@@ -97,6 +99,7 @@ const OwnerShopScreen = () => {
   useEffect(() => { fetchData(); }, []);
 
   const fetchData = async () => {
+    setFetchError(null);
     try {
       const res = await shopAPI.getMyShop();
       const shopData = res.data.data.shop;
@@ -110,8 +113,12 @@ const OwnerShopScreen = () => {
         category: shopData.category,
       });
     } catch (err) {
-      if (err.response?.status !== 404) console.log('fetchData error:', err);
-      // 404 = no shop yet, expected for a new owner — shop stays null, registration form shows
+      if (err.response?.status === 404) {
+        // no shop yet, expected for a new owner — shop stays null, registration form shows
+      } else {
+        console.log('fetchData error:', err);
+        setFetchError('Failed to load your shop. Please check your connection and try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -120,6 +127,14 @@ const OwnerShopScreen = () => {
   const handleAddService = async () => {
       if (!newService.name || !newService.price || !newService.durationMin) {
         return Alert.alert('Error', 'Please fill all fields');
+      }
+      const priceNum = Number(newService.price);
+      const durationNum = Number(newService.durationMin);
+      if (isNaN(priceNum) || priceNum <= 0) {
+        return Alert.alert('Error', 'Please enter a valid price');
+      }
+      if (isNaN(durationNum) || durationNum <= 0) {
+        return Alert.alert('Error', 'Please enter a valid duration');
       }
       setAddingService(true);
       try {
@@ -152,12 +167,15 @@ const OwnerShopScreen = () => {
     Alert.alert('Remove Service', 'Are you sure?', [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Remove', style: 'destructive', onPress: async () => {
+        setRemovingId(id);
         try {
           await serviceAPI.remove(id);
-          fetchData();
+          await fetchData();
         } catch (err) {
           console.log('handleRemoveService error:', err.message, err.response?.data);
           Alert.alert('Error', 'Failed to remove service');
+        } finally {
+          setRemovingId(null);
         }
       }},
     ]);
@@ -198,12 +216,15 @@ const OwnerShopScreen = () => {
     Alert.alert('Remove Staff', 'Are you sure?', [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Remove', style: 'destructive', onPress: async () => {
+        setRemovingId(id);
         try {
           await staffAPI.remove(id);
-          fetchData();
+          await fetchData();
         } catch (err) {
           console.log('handleRemoveStaff error:', err.message, err.response?.data);
           Alert.alert('Error', 'Failed to remove staff');
+        } finally {
+          setRemovingId(null);
         }
       }},
     ]);
@@ -296,6 +317,17 @@ const OwnerShopScreen = () => {
   if (loading) return (
     <View style={styles.center}>
       <ActivityIndicator color={COLORS.accent} size="large" />
+    </View>
+  );
+
+  if (!shop && fetchError) return (
+    <View style={styles.center}>
+      <Ionicons name="alert-circle-outline" size={48} color={COLORS.error} />
+      <Text style={[styles.itemName, { marginTop: SPACING.md, textAlign: 'center' }]}>Something went wrong</Text>
+      <Text style={[styles.itemMeta, { marginTop: SPACING.xs, textAlign: 'center', paddingHorizontal: SPACING.xl }]}>{fetchError}</Text>
+      <TouchableOpacity style={styles.addBtn} onPress={fetchData} activeOpacity={0.85}>
+        <Text style={styles.addBtnText}>Retry</Text>
+      </TouchableOpacity>
     </View>
   );
 
@@ -464,8 +496,10 @@ const OwnerShopScreen = () => {
                 <TouchableOpacity onPress={() => handleEditService(s)} style={styles.editBtn}>
                   <Ionicons name="pencil" size={14} color={COLORS.accent} />
                 </TouchableOpacity>
-                <TouchableOpacity onPress={() => handleRemoveService(s._id)} style={styles.removeBtn}>
-                  <Ionicons name="close" size={16} color={COLORS.error} />
+                <TouchableOpacity onPress={() => handleRemoveService(s._id)} style={styles.removeBtn} disabled={removingId === s._id}>
+                  {removingId === s._id
+                    ? <ActivityIndicator size="small" color={COLORS.error} />
+                    : <Ionicons name="close" size={16} color={COLORS.error} />}
                 </TouchableOpacity>
               </View>
             ))}
@@ -503,8 +537,10 @@ const OwnerShopScreen = () => {
                 <TouchableOpacity onPress={() => handleEditStaff(s)} style={styles.editBtn}>
                   <Ionicons name="pencil" size={14} color={COLORS.accent} />
                 </TouchableOpacity>
-                <TouchableOpacity onPress={() => handleRemoveStaff(s._id)} style={styles.removeBtn}>
-                  <Ionicons name="close" size={16} color={COLORS.error} />
+                <TouchableOpacity onPress={() => handleRemoveStaff(s._id)} style={styles.removeBtn} disabled={removingId === s._id}>
+                  {removingId === s._id
+                    ? <ActivityIndicator size="small" color={COLORS.error} />
+                    : <Ionicons name="close" size={16} color={COLORS.error} />}
                 </TouchableOpacity>
               </View>
             ))}
@@ -562,11 +598,11 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   center:    { flex: 1, backgroundColor: COLORS.background, alignItems: 'center', justifyContent: 'center' },
   header:    { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: SPACING.lg, paddingTop: SPACING.xl + 20, paddingBottom: SPACING.md },
-  title:     { fontSize: FONTS.sizes.xxl, fontWeight: '700', color: COLORS.white },
+  title:     { fontSize: FONTS.sizes.xxl, fontWeight: '700', color: COLORS.textPrimary },
   logoutText:{ color: COLORS.error, fontSize: FONTS.sizes.sm, fontWeight: '600' },
 
   statusBar:        { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginHorizontal: SPACING.lg, marginBottom: SPACING.md, backgroundColor: COLORS.card, borderRadius: RADIUS.md, padding: SPACING.md, borderWidth: 1.5 },
-  statusBarText:    { color: COLORS.white, fontWeight: '600', fontSize: FONTS.sizes.sm },
+  statusBarText:    { color: COLORS.textPrimary, fontWeight: '600', fontSize: FONTS.sizes.sm },
   statusToggleText: { fontWeight: '700', fontSize: FONTS.sizes.sm },
 
   tabRow:        { flexDirection: 'row', marginHorizontal: SPACING.lg, backgroundColor: COLORS.card, borderRadius: RADIUS.md, padding: 4, marginBottom: SPACING.md },
@@ -579,13 +615,11 @@ const styles = StyleSheet.create({
 
   itemCard:   { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.card, borderRadius: RADIUS.md, padding: SPACING.md, marginBottom: SPACING.sm, borderWidth: 1, borderColor: COLORS.border, gap: SPACING.sm },
   itemLeft:   { flex: 1 },
-  itemName:   { color: COLORS.white, fontWeight: '600', fontSize: FONTS.sizes.md },
+  itemName:   { color: COLORS.textPrimary, fontWeight: '600', fontSize: FONTS.sizes.md },  
   itemMeta:   { color: COLORS.textSecondary, fontSize: FONTS.sizes.xs, marginTop: 2 },
   iconTextRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   removeBtn:  { width: 32, height: 32, borderRadius: 16, backgroundColor: COLORS.error + '20', alignItems: 'center', justifyContent: 'center' },
-  removeBtnText: { color: COLORS.error, fontWeight: '700' },
   editBtn:    { width: 32, height: 32, borderRadius: 16, backgroundColor: COLORS.accent + '20', alignItems: 'center', justifyContent: 'center', marginRight: SPACING.xs },
-  editBtnText:{ color: COLORS.accent, fontWeight: '700' },
 
   staffAvatar:     { width: 40, height: 40, borderRadius: 20, backgroundColor: COLORS.accent, alignItems: 'center', justifyContent: 'center' },
   staffAvatarText: { color: COLORS.white, fontWeight: '700', fontSize: FONTS.sizes.md },
