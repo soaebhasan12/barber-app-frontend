@@ -2,6 +2,7 @@ import React, { createContext, useState, useEffect, useContext } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authAPI } from '../services/api';
 import { registerForPushNotificationsAsync } from '../services/notifications';
+import { onForceLogout } from '../services/authEvents';
 
 const AuthContext = createContext();
 
@@ -13,6 +14,8 @@ export const AuthProvider = ({ children }) => {
   // App open hone pe check karo already logged in hai?
   useEffect(() => {
     checkLogin();
+    const unsubscribe = onForceLogout(() => logout(true)); // token already invalid — skip server call
+    return unsubscribe;
   }, []);
 
   const checkLogin = async () => {
@@ -39,8 +42,13 @@ export const AuthProvider = ({ children }) => {
     registerForPushNotificationsAsync(); // fire-and-forget, login flow block nahi hogi
   };
 
-  const logout = async () => {
-    try { await authAPI.clearFcmToken(); } catch (err) { console.log('clearFcmToken error:', err); }
+  const logout = async (skipServerCall = false) => {
+    // skipServerCall=true jab token expire ho chuka ho (interceptor se) —
+    // clearFcmToken khud ek authenticated call hai, expired token pe woh bhi
+    // 401 dega aur dobara logout trigger karega (infinite loop se bachne ke liye)
+    if (!skipServerCall) {
+      try { await authAPI.clearFcmToken(); } catch (err) { console.log('clearFcmToken error:', err); }
+    }
     await AsyncStorage.removeItem('token');
     await AsyncStorage.removeItem('user');
     setToken(null);

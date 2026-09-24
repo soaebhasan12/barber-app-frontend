@@ -2,6 +2,7 @@
 
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { emitForceLogout } from './authEvents';
 
 const BASE_URL = 'https://barber-app-backend-mebr.onrender.com/api';
 
@@ -16,6 +17,18 @@ api.interceptors.request.use(async (config) => {
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
+
+// Response interceptor: expired/invalid token pe auto-logout signal
+api.interceptors.response.use(
+  (response) => response,
+  async (err) => {
+    if (err.response?.status === 401) {
+      await AsyncStorage.removeItem('token');
+      emitForceLogout(); // AuthContext isko sunke navigation reset karega
+    }
+    return Promise.reject(err);
+  }
+);
 
 export const authAPI = {
   sendOTP: ({ phone, email, role }) => api.post('/auth/send-otp', { phone, email, role }),
