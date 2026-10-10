@@ -1,5 +1,22 @@
-node_modules
+# EAS Build ignore file
+node_modules/
 .git
-.expo
-android/
+.expo/
+dist/
+web-build/
+
+# Ignore local native folders so EAS prebuilds cleanly from app.json plugins
 /android
+/ios
+
+# Environment files
+.env
+.env.*
+.env*.local
+
+# Cache and logs
+coverage/
+.cache/
+*.log
+npm-debug.*
+yarn-debug.*
