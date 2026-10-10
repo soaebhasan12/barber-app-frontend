@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, Alert, Modal, TextInput, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { COLORS, FONTS, SPACING, RADIUS, SHADOWS } from '../constants/theme';
-import { bookingAPI, reviewAPI } from '../services/api';
+import { bookingAPI, reviewAPI, getApiError } from '../services/api';
+import { formatTime12h, formatSlotDate, toLocalYMD } from '../utils/time';
 
 const MAX_COMMENT_LENGTH = 500;
 
@@ -25,6 +26,9 @@ const BookingScreen = () => {
   const [newDate, setNewDate] = useState('');
   const [newSlot, setNewSlot] = useState(null);
   const [rescheduling, setRescheduling] = useState(false);
+  const [fetchError, setFetchError] = useState(null);
+  const [cancellingId, setCancellingId] = useState(null);
+  const slotReqRef = useRef(0);
 
   useFocusEffect(
     useCallback(() => {
@@ -34,14 +38,15 @@ const BookingScreen = () => {
 
   const fetchBookings = async () => {
     try {
+      setFetchError(null);
       const res = await bookingAPI.getMyBookings();
-      const data = res.data.data;
+      const data = res.data.data || [];
       setBookings(data);
-      // Backend se aaye isReviewed flag se local state initialize karo
       const reviewed = data.filter(b => b.isReviewed).map(b => b._id);
       setReviewedIds(new Set(reviewed));
     } catch (err) {
       console.log('fetchBookings error:', err);
+      setFetchError(getApiError(err, 'Could not load your bookings.').message);
     } finally {
       setLoading(false);
     }
@@ -78,27 +83,32 @@ const BookingScreen = () => {
     return Array.from({ length: 7 }, (_, i) => {
       const d = new Date();
       d.setDate(d.getDate() + i);
-      return { date: d.toISOString().split('T')[0], day: days[d.getDay()], num: d.getDate() };
+      return { date: toLocalYMD(d), day: days[d.getDay()], num: d.getDate() };
     });
   };
 
   const openReschedule = (booking) => {
     setRescheduleBooking(booking);
-    const today = new Date().toISOString().split('T')[0];
+    const today = toLocalYMD();
     setNewDate(today);
     setNewSlot(null);
     setRescheduleModal(true);
   };
 
   const fetchSlotsForReschedule = async (date) => {
+    const reqId = ++slotReqRef.current; // sirf sabse naye request ka jawab dikhao
     setSlotsLoading(true);
     try {
       const res = await bookingAPI.getSlots(rescheduleBooking.shopId._id, date, rescheduleBooking.staffId?._id);
-      setSlots(res.data.data);
+      if (reqId !== slotReqRef.current) return;
+      setSlots(res.data.data || []);
     } catch (err) {
+      if (reqId !== slotReqRef.current) return;
       console.log('fetchSlots error:', err);
+      setSlots([]);
+      Alert.alert('Error', getApiError(err, 'Could not load slots.').message);
     } finally {
-      setSlotsLoading(false);
+      if (reqId === slotReqRef.current) setSlotsLoading(false);
     }
   };
 
@@ -115,29 +125,66 @@ const BookingScreen = () => {
       setRescheduleModal(false);
       fetchBookings();
     } catch (err) {
-      Alert.alert('Error', err.response?.data?.message || 'Failed to reschedule');
+      console.log('reschedule error:', err);
+      const e = getApiError(err, 'Failed to reschedule');
+      if (e.code === 'PAYMENT_REQUIRED') {
+        Alert.alert('Payment required', 'Future-dated bookings need online payment. Please cancel this booking and book again with payment.');
+      } else if (e.status === 409) {
+        Alert.alert('Slot not available', e.message || 'This slot was just taken. Please pick another.');
+        setNewSlot(null);
+        fetchSlotsForReschedule(newDate);
+      } else {
+        Alert.alert('Error', e.message);
+      }
     } finally {
       setRescheduling(false);
     }
   };
 
+  // Sirf message ke liye (device clock). Asli refund ka faisla server karta hai.
+  const getCancelNote = (booking) => {
+    if (booking.paymentStatus !== 'paid') return '';
+    const [y, m, d] = (booking.slotDate || '').split('-').map(Number);
+    const [hh, mm] = (booking.slotTime || '').split(':').map(Number);
+    if ([y, m, d, hh, mm].some(v => !Number.isFinite(v))) {
+      return '\n\nRefund policy: full refund if cancelled 2+ hours before the slot, no refund after that.';
+    }
+    const hoursLeft = (new Date(y, m - 1, d, hh, mm).getTime() - Date.now()) / 3600000;
+    return hoursLeft >= 2
+      ? '\n\nYou will get a full refund.'
+      : '\n\nLess than 2 hours left: this cancellation is not eligible for a refund.';
+  };
+
   const handleCancel = (booking) => {
+    if (cancellingId) return;
     Alert.alert(
       'Cancel Booking',
-      `Cancel your booking at ${booking.shopId?.name || 'this shop'}?`,
+      `Cancel your booking at ${booking.shopId?.name || 'this shop'}?${getCancelNote(booking)}`,
       [
         { text: 'No', style: 'cancel' },
         {
           text: 'Yes, Cancel',
           style: 'destructive',
           onPress: async () => {
+            setCancellingId(booking._id);
             try {
-              await bookingAPI.cancel(booking._id, 'Cancelled by customer');
-              setBookings(prev => prev.map(b =>
-                b._id === booking._id ? { ...b, status: 'cancelled' } : b
-              ));
+              const res = await bookingAPI.cancel(booking._id, 'Cancelled by customer');
+              console.log('cancel response:', JSON.stringify(res.data)); // TEMP: refund field ka path confirm karne ke liye
+              const refund = res.data?.data?.refund ?? res.data?.refund;
+              const refundMsg = {
+                processed: 'Your refund has been initiated. It usually reaches your account in 5-7 working days.',
+                failed: 'The automatic refund could not be processed. Please contact support with your booking details.',
+                not_eligible: 'It was less than 2 hours before the slot, so this booking is not eligible for a refund.',
+              }[refund];
+              Alert.alert('Booking cancelled', refundMsg || 'Your booking has been cancelled.');
+              fetchBookings();
             } catch (err) {
-              Alert.alert('Error', err.response?.data?.message || 'Failed to cancel booking');
+              console.log('cancel error:', err);
+              const e = getApiError(err, 'Failed to cancel booking');
+              Alert.alert('Error', e.message);
+              if (e.status === 409) fetchBookings(); // booking pehle hi badal chuki hai
+            } finally {
+              setCancellingId(null);
             }
           },
         },
@@ -147,7 +194,7 @@ const BookingScreen = () => {
 
   const getStatusColor = (status) => {
     if (status === 'confirmed')  return COLORS.success;
-    if (status === 'cancelled')  return COLORS.error;
+    if (status === 'cancelled' || status === 'no_show') return COLORS.error;
     if (status === 'completed')  return COLORS.accent;
     return COLORS.warning;
   };
@@ -159,7 +206,7 @@ const BookingScreen = () => {
             <Text style={styles.shopName}>{item.shopId?.name || 'Shop'}</Text>
             <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) + '25' }]}>
               <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>
-                {item.status.toUpperCase()}
+                {(item.status || '').replace('_', ' ').toUpperCase()}
               </Text>
             </View>
           </View>
@@ -192,7 +239,7 @@ const BookingScreen = () => {
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
               <Ionicons name="calendar-outline" size={14} color={COLORS.textSecondary} />
               <Text style={{ color: COLORS.textSecondary, fontSize: FONTS.sizes.sm }} numberOfLines={1}>
-                {item.slotDate ? item.slotDate : 'N/A'}
+                {item.slotDate ? formatSlotDate(item.slotDate) : 'N/A'}
               </Text>
             </View>
 
@@ -200,7 +247,7 @@ const BookingScreen = () => {
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
               <Ionicons name="time-outline" size={14} color={COLORS.textSecondary} />
               <Text style={{ color: COLORS.textSecondary, fontSize: FONTS.sizes.sm }} numberOfLines={1}>
-                {item.slotTime ? item.slotTime : 'N/A'}
+                {item.slotTime ? formatTime12h(item.slotTime) : 'N/A'}
               </Text>
             </View>
           </View>
@@ -214,7 +261,7 @@ const BookingScreen = () => {
 
           {(item.status === 'pending' || item.status === 'confirmed') && (
             <View style={{ flexDirection: 'row', gap: SPACING.sm, marginTop: SPACING.sm }}>
-              <TouchableOpacity style={[styles.cancelBtn, { flex: 1, marginTop: 0 }]} onPress={() => handleCancel(item)}>
+              <TouchableOpacity style={[styles.cancelBtn, { flex: 1, marginTop: 0 }]} onPress={() => handleCancel(item)} disabled={cancellingId === item._id}>
                 <Text style={styles.cancelBtnText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[styles.rescheduleBtn, { flex: 1 }]} onPress={() => openReschedule(item)}>
@@ -260,7 +307,19 @@ const BookingScreen = () => {
         <Text style={styles.title}>My Bookings</Text>
       </View>
 
-      {bookings.length === 0 ? (
+      {fetchError && bookings.length === 0 ? (
+        <View style={styles.center}>
+          <Ionicons name="cloud-offline-outline" size={48} color={COLORS.textMuted} />
+          <Text style={styles.emptyText}>Couldn't load bookings</Text>
+          <Text style={styles.emptySubtext}>{fetchError}</Text>
+          <TouchableOpacity
+            style={[styles.rescheduleBtn, { marginTop: SPACING.md, paddingHorizontal: SPACING.lg }]}
+            onPress={() => { setLoading(true); fetchBookings(); }}
+          >
+            <Text style={styles.rescheduleBtnText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      ) : bookings.length === 0 ? (
         <View style={styles.center}>
           <Ionicons name="calendar-outline" size={48} color={COLORS.textMuted} />
           <Text style={styles.emptyText}>No bookings yet</Text>
@@ -270,7 +329,7 @@ const BookingScreen = () => {
         <FlatList
           data={bookings}
           keyExtractor={item => item._id}
-          renderItem={({ item }) => <BookingCard item={item} />}
+          renderItem={({ item }) => BookingCard({ item })}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
         />
@@ -351,7 +410,7 @@ const BookingScreen = () => {
                     onPress={() => slot.available && setNewSlot(slot.time)}
                     disabled={!slot.available}
                   >
-                    <Text style={[styles.slotText, newSlot === slot.time && styles.slotTextSelected]}>{slot.time}</Text>
+                    <Text style={[styles.slotText, newSlot === slot.time && styles.slotTextSelected]}>{formatTime12h(slot.time)}</Text>
                   </TouchableOpacity>
                 ))}
               </View>

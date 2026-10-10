@@ -74,8 +74,7 @@ export const AuthProvider = ({ children }) => {
   const refreshUser = async () => {
     try {
       const res = await authAPI.getMe();
-      console.log('getMe response:', JSON.stringify(res.data)); // TEMP: shape check, baad mein hata dena
-      const fresh = res.data?.user ?? res.data;
+      const fresh = res.data?.data;
       if (!fresh || typeof fresh !== 'object') return;
       const stillLoggedIn = await AsyncStorage.getItem('token'); // beech mein logout hua ho to user wapas na jodo
       if (!stillLoggedIn) return;

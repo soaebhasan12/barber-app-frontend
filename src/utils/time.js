@@ -18,3 +18,12 @@ export const formatSlotDate = (ymd) => {
   if (!m) return typeof ymd === 'string' ? ymd : '';
   return `${parseInt(m[3], 10)} ${MONTHS[parseInt(m[2], 10) - 1]} ${m[1]}`;
 };
+
+// Local-date "YYYY-MM-DD". toISOString() mat use karo: wo UTC mein badalta hai aur
+// India mein subah 12 se 5:30 ke beech kal ki date de deta hai.
+export const toLocalYMD = (d = new Date()) => {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+};
