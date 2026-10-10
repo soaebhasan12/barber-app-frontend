@@ -87,7 +87,6 @@ const ShopDetailScreen = ({ route, navigation }) => {
 
   const handleBookingError = (err) => {
     const e = getApiError(err, 'Booking failed. Please try again.');
-    console.log('create booking error body:', JSON.stringify(err.response?.data)); // TEMP: holdCount/maxHolds ka path dekhne ke liye
     const pickAnother = { text: 'Pick another slot', style: 'cancel', onPress: () => { setSelectedSlot(null); fetchSlots(); } };
 
     if (e.status === 409 && e.code === 'SLOT_HELD') {
@@ -175,7 +174,6 @@ const ShopDetailScreen = ({ route, navigation }) => {
         slotTime: selectedSlot,
         ...extra,
       });
-      console.log('create booking response:', JSON.stringify(res.data)); // TEMP: response shape check
       const body = res.data?.data ?? {};
       const newBooking = body.booking ?? body;
       const payment = body.payment ?? res.data?.payment ?? null;

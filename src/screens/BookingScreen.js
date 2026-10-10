@@ -169,7 +169,6 @@ const BookingScreen = () => {
             setCancellingId(booking._id);
             try {
               const res = await bookingAPI.cancel(booking._id, 'Cancelled by customer');
-              console.log('cancel response:', JSON.stringify(res.data)); // TEMP: refund field ka path confirm karne ke liye
               const refund = res.data?.data?.refund ?? res.data?.refund;
               const refundMsg = {
                 processed: 'Your refund has been initiated. It usually reaches your account in 5-7 working days.',
