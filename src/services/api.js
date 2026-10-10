@@ -18,17 +18,43 @@ api.interceptors.request.use(async (config) => {
   return config;
 });
 
-// Response interceptor: expired/invalid token pe auto-logout signal
+// Response interceptor: expired/invalid token pe auto-logout signal (sirf logged-in requests par, ek hi baar)
+let handling401 = false;
 api.interceptors.response.use(
   (response) => response,
   async (err) => {
-    if (err.response?.status === 401) {
-      await AsyncStorage.removeItem('token');
-      emitForceLogout(); // AuthContext isko sunke navigation reset karega
+    const url = err.config?.url || '';
+    const hadToken = !!err.config?.headers?.Authorization;
+    const isAuthAttempt = url.includes('/auth/send-otp') || url.includes('/auth/verify-otp');
+    if (err.response?.status === 401 && hadToken && !isAuthAttempt && !handling401) {
+      handling401 = true;
+      try {
+        await AsyncStorage.removeItem('token');
+      } finally {
+        emitForceLogout(); // AuthContext isko sunke navigation reset karega
+        setTimeout(() => { handling401 = false; }, 1500);
+      }
     }
     return Promise.reject(err);
   }
 );
+
+// Har axios error ko ek hi shape mein badalta hai, taaki screens status/code par switch kar sakein.
+// 409 SLOT_HELD ke liye holdCount/maxHolds `data` ke andar milenge.
+export const getApiError = (err, fallback = 'Something went wrong. Please try again.') => {
+  if (!err?.response) {
+    return {
+      status: 0,
+      code: 'NETWORK',
+      message: err?.code === 'ECONNABORTED'
+        ? 'Request timed out. Please try again.'
+        : 'No internet connection. Please check and retry.',
+      data: null,
+    };
+  }
+  const { status, data } = err.response;
+  return { status, code: data?.code || null, message: data?.message || fallback, data: data || null };
+};
 
 export const authAPI = {
   sendOTP: ({ phone, email, role }) => api.post('/auth/send-otp', { phone, email, role }),
@@ -49,7 +75,7 @@ export const shopAPI = {
 };
 
 export const bookingAPI = {
-  getSlots: (shopId, date, staffId) => api.get(`/bookings/slots?shopId=${shopId}&date=${date}${staffId ? `&staffId=${staffId}` : ''}`),
+  getSlots: (shopId, date, staffId) => api.get('/bookings/slots', { params: { shopId, date, ...(staffId ? { staffId } : {}) } }),
   create:     (data) => api.post('/bookings/create', data),
   getMyBookings: () => api.get('/bookings/my'),
   cancel:     (id, reason) => api.put(`/bookings/${id}/cancel`, { reason }),
