@@ -5,21 +5,22 @@ import {
   TouchableOpacity, ActivityIndicator, Alert, Image, Dimensions,
 } from 'react-native';
 import { COLORS, FONTS, SPACING, RADIUS, SHADOWS } from '../constants/theme';
-import { serviceAPI, bookingAPI, staffAPI, paymentAPI } from '../services/api';
-import RazorpayCheckout from 'react-native-razorpay';
+import { serviceAPI, bookingAPI, staffAPI, getApiError } from '../services/api';
+import { startPayment } from '../services/payment';
+import { toLocalYMD } from '../utils/time';
 import { useAuth } from '../context/AuthContext';
 import Button from '../components/Button';
 
 const ShopDetailScreen = ({ route, navigation }) => {
   const { shop } = route.params;
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const [services, setServices]         = useState([]);
   const [staff, setStaff]               = useState([]);
   const [slots, setSlots]               = useState([]);
   const [selectedServices, setSelectedServices] = useState([]);
   const [selectedStaff, setSelectedStaff]     = useState(null);
   const [selectedSlot, setSelectedSlot]       = useState(null);
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedDate, setSelectedDate] = useState(toLocalYMD());
   const [loading, setLoading]           = useState(true);
   const [slotsLoading, setSlotsLoading] = useState(false);
   const [booking, setBooking]           = useState(false);
@@ -28,7 +29,8 @@ const ShopDetailScreen = ({ route, navigation }) => {
   const bannerScrollRef = useRef(null);
   const [bannerIndex, setBannerIndex] = useState(0);
 
-  useEffect(() => { fetchInitialData(); }, []);
+  useEffect(() => { fetchInitialData(); refreshUser?.(); }, []); // refreshUser: payAtShopBlocked fresh rakhne ke liye
+  const submittingRef = useRef(false); // setState async hota hai, double-tap ke liye ref
   useEffect(() => { fetchSlots(); }, [selectedDate, selectedStaff]);
 
   useEffect(() => {
@@ -81,8 +83,88 @@ const ShopDetailScreen = ({ route, navigation }) => {
   const totalPrice    = selectedServices.reduce((sum, s) => sum + s.price, 0);
   const totalDuration = selectedServices.reduce((sum, s) => sum + s.durationMin, 0);
 
-  const handleBooking = async () => {
+  const goBack = () => navigation.goBack();
+
+  const handleBookingError = (err) => {
+    const e = getApiError(err, 'Booking failed. Please try again.');
+    console.log('create booking error body:', JSON.stringify(err.response?.data)); // TEMP: holdCount/maxHolds ka path dekhne ke liye
+    const pickAnother = { text: 'Pick another slot', style: 'cancel', onPress: () => { setSelectedSlot(null); fetchSlots(); } };
+
+    if (e.status === 409 && e.code === 'SLOT_HELD') {
+      const n = e.data?.holdCount ?? e.data?.data?.holdCount;
+      const who = n ? `${n} customer${n > 1 ? 's' : ''} already hold` : 'Other customers already hold';
+      Alert.alert(
+        'Slot already held',
+        `${who} this slot without paying. If one of them pays first, you could lose it. Pay now to guarantee it.`,
+        [
+          pickAnother,
+          { text: 'Book anyway', onPress: () => handleBooking({ confirmHold: true }) },
+          { text: 'Pay now', onPress: () => handleBooking({ payNow: true }) },
+        ]
+      );
+    } else if (e.status === 409 && e.code === 'HOLDS_FULL') {
+      Alert.alert(
+        'Slot is full',
+        'All waiting spots for this slot are taken. You can still secure it by paying now, or pick another slot.',
+        [pickAnother, { text: 'Pay now', onPress: () => handleBooking({ payNow: true }) }]
+      );
+    } else if (e.status === 409) {
+      Alert.alert('Slot not available', 'This slot was just taken. Please pick another one.');
+      setSelectedSlot(null);
+      fetchSlots();
+    } else {
+      Alert.alert('Booking failed', e.message);
+    }
+  };
+
+  // mandatory=true: payment ke bina booking nahi tikegi (future date / blocked user / pay now)
+  const runPayment = async (newBooking, order, mandatory) => {
+    const result = await startPayment({
+      booking: newBooking,
+      order,
+      shopName: shop.name,
+      description: selectedServices.map(s => s.name).join(' + '),
+      user,
+    });
+    if (result.status === 'busy') return;
+
+    if (result.status === 'paid') {
+      Alert.alert('Booking confirmed', 'Payment successful! Your slot is secured.', [{ text: 'OK', onPress: goBack }]);
+    } else if (result.status === 'verify_pending') {
+      Alert.alert('Payment received', result.message, [{ text: 'OK', onPress: goBack }]);
+    } else if (result.status === 'slot_taken' || result.status === 'expired') {
+      Alert.alert('Slot not secured', result.message);
+      setSelectedSlot(null);
+      fetchSlots();
+    } else if (mandatory) {
+      Alert.alert(
+        result.status === 'cancelled' ? 'Payment not completed' : 'Payment failed',
+        `${result.message} Your slot is held for a few minutes. You can complete the payment from My Bookings, otherwise it will be released.`,
+        [{ text: 'OK', onPress: goBack }]
+      );
+    } else {
+      Alert.alert('Payment not completed', 'No problem, your booking is still held. You can pay at the shop.', [{ text: 'OK', onPress: goBack }]);
+    }
+  };
+
+  // Pay-at-shop booking ban gayi (payment null): optional online payment ka option do
+  const offerOptionalPayment = (newBooking) => {
+    Alert.alert(
+      'Booking placed!',
+      'Pay at the shop, or pay online now to guarantee your slot.',
+      [
+        { text: 'Pay at Shop', onPress: goBack },
+        { text: 'Pay Online', onPress: () => { runPayment(newBooking, null, false).catch(err => console.log('runPayment error:', err)); } },
+      ],
+      { cancelable: false }
+    );
+  };
+
+  // extra = { payNow: true } ya { confirmHold: true } (hold popup se)
+  const handleBooking = async (extra = {}) => {
     if (selectedServices.length === 0 || !selectedSlot) return;
+    if (submittingRef.current) return;
+    submittingRef.current = true;
     setBooking(true);
     try {
       const res = await bookingAPI.create({
@@ -91,58 +173,24 @@ const ShopDetailScreen = ({ route, navigation }) => {
         staffId:  selectedStaff?._id || null,
         slotDate: selectedDate,
         slotTime: selectedSlot,
+        ...extra,
       });
-      const newBooking = res.data.data;
+      console.log('create booking response:', JSON.stringify(res.data)); // TEMP: response shape check
+      const body = res.data?.data ?? {};
+      const newBooking = body.booking ?? body;
+      const payment = body.payment ?? res.data?.payment ?? null;
 
-      Alert.alert(
-        'Booking Confirmed!',
-        'How would you like to pay?',
-        [
-          { text: 'Pay at Shop', onPress: () => navigation.goBack() },
-          { text: 'Pay Online', onPress: () => handlePayOnline(newBooking) },
-        ]
-      );
-    } catch (err) {
-      alert(err.response?.data?.message || 'Booking failed. Please try again.');
-    } finally {
-      setBooking(false);
-    }
-  };
-
-  const handlePayOnline = async (newBooking) => {
-    try {
-      const orderRes = await paymentAPI.createOrder(newBooking._id);
-      const { orderId, amount, keyId } = orderRes.data.data;
-
-      const options = {
-        key: keyId,
-        amount: amount,
-        currency: 'INR',
-        name: shop.name,
-        description: selectedServices.map(s => s.name).join(' + '),
-        order_id: orderId,
-        prefill: { name: user?.name, contact: user?.phone },
-        theme: { color: COLORS.accent },
-      };
-
-      const paymentData = await RazorpayCheckout.open(options);
-
-      await paymentAPI.verify({
-        bookingId: newBooking._id,
-        razorpay_order_id: paymentData.razorpay_order_id,
-        razorpay_payment_id: paymentData.razorpay_payment_id,
-        razorpay_signature: paymentData.razorpay_signature,
-      });
-
-      Alert.alert('Success', 'Payment successful!');
-      navigation.goBack();
-    } catch (err) {
-      if (err.code === 'PAYMENT_CANCELLED' || err.description) {
-        Alert.alert('Payment Cancelled', 'You can pay at the shop instead. Your booking is still confirmed.');
+      if (payment) {
+        await runPayment(newBooking, payment, true);
       } else {
-        Alert.alert('Error', 'Payment failed. You can pay at the shop instead.');
+        offerOptionalPayment(newBooking);
       }
-      navigation.goBack();
+    } catch (err) {
+      console.log('create booking error:', err);
+      handleBookingError(err);
+    } finally {
+      submittingRef.current = false;
+      setBooking(false);
     }
   };
 
@@ -151,7 +199,7 @@ const ShopDetailScreen = ({ route, navigation }) => {
     return Array.from({ length: 7 }, (_, i) => {
       const d = new Date();
       d.setDate(d.getDate() + i);
-      return { date: d.toISOString().split('T')[0], day: days[d.getDay()], num: d.getDate() };
+      return { date: toLocalYMD(d), day: days[d.getDay()], num: d.getDate() };
     });
   };
 
@@ -443,7 +491,7 @@ const ShopDetailScreen = ({ route, navigation }) => {
           </View>
           <Button
             title={`Book ₹${totalPrice}`}
-            onPress={handleBooking}
+            onPress={() => handleBooking()}
             loading={booking}
             style={{ minWidth: 130 }}
           />
