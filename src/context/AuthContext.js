@@ -25,6 +25,7 @@ export const AuthProvider = ({ children }) => {
       if (savedToken && savedUser) {
         setToken(savedToken);
         setUser(JSON.parse(savedUser));
+        refreshUser(); // cached user turant dikhao, fresh data peeche se aa jayega
         registerForPushNotificationsAsync();
       }
     } catch (err) {
@@ -40,6 +41,7 @@ export const AuthProvider = ({ children }) => {
     setToken(tokenValue);
     setUser(userData);
     registerForPushNotificationsAsync(); // fire-and-forget, login flow block nahi hogi
+    refreshUser();
   };
 
   const logout = async (skipServerCall = false) => {
@@ -55,13 +57,36 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   };
 
+  // Merge karta hai (replace nahi), taaki payAtShopBlocked jaise fields partial update se na jayein
   const updateUser = async (updatedUserData) => {
-    await AsyncStorage.setItem('user', JSON.stringify(updatedUserData));
-    setUser(updatedUserData);
+    let saved = {};
+    try {
+      saved = JSON.parse((await AsyncStorage.getItem('user')) || '{}');
+    } catch (err) {
+      console.log('updateUser parse error:', err);
+    }
+    const merged = { ...saved, ...updatedUserData };
+    await AsyncStorage.setItem('user', JSON.stringify(merged));
+    setUser(merged);
+  };
+
+  // Server se fresh user lao. payAtShopBlocked server-side badalta hai, cache purana ho jata hai.
+  const refreshUser = async () => {
+    try {
+      const res = await authAPI.getMe();
+      console.log('getMe response:', JSON.stringify(res.data)); // TEMP: shape check, baad mein hata dena
+      const fresh = res.data?.user ?? res.data;
+      if (!fresh || typeof fresh !== 'object') return;
+      const stillLoggedIn = await AsyncStorage.getItem('token'); // beech mein logout hua ho to user wapas na jodo
+      if (!stillLoggedIn) return;
+      await updateUser(fresh);
+    } catch (err) {
+      console.log('refreshUser error:', err);
+    }
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, logout, updateUser }}>
+    <AuthContext.Provider value={{ user, token, loading, login, logout, updateUser, refreshUser, payAtShopBlocked: !!user?.payAtShopBlocked }}>
       {children}
     </AuthContext.Provider>
   );
