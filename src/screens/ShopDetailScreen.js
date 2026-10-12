@@ -124,6 +124,8 @@ const ShopDetailScreen = ({ route, navigation }) => {
         'All waiting spots for this slot are taken. You can still secure it by paying now, or pick another slot.',
         [pickAnother, { text: 'Pay now', onPress: () => handleBooking({ payNow: true }) }]
       );
+    } else if (e.status === 409 && e.code === 'USER_LIMIT') {
+      Alert.alert('Booking limit reached', e.message);
     } else if (e.status === 409) {
       Alert.alert('Slot not available', 'This slot was just taken. Please pick another one.');
       setSelectedSlot(null);
