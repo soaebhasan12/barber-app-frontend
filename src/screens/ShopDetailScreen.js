@@ -7,7 +7,7 @@ import {
 import { COLORS, FONTS, SPACING, RADIUS, SHADOWS } from '../constants/theme';
 import { serviceAPI, bookingAPI, staffAPI, getApiError } from '../services/api';
 import { startPayment } from '../services/payment';
-import { toLocalYMD } from '../utils/time';
+import { toLocalYMD, formatTime12h, formatSlotDate } from '../utils/time';
 import { useAuth } from '../context/AuthContext';
 import Button from '../components/Button';
 
@@ -22,15 +22,18 @@ const ShopDetailScreen = ({ route, navigation }) => {
   const [selectedSlot, setSelectedSlot]       = useState(null);
   const [selectedDate, setSelectedDate] = useState(toLocalYMD());
   const [loading, setLoading]           = useState(true);
+  const [loadError, setLoadError]       = useState(null);
   const [slotsLoading, setSlotsLoading] = useState(false);
+  const [slotsError, setSlotsError]     = useState(null);
   const [booking, setBooking]           = useState(false);
   const [tab, setTab]                   = useState('services');
 
   const bannerScrollRef = useRef(null);
   const [bannerIndex, setBannerIndex] = useState(0);
+  const submittingRef = useRef(false); // setState async hota hai, double-tap ke liye ref
+  const slotReqRef = useRef(0);        // sirf sabse naye slots request ka jawab dikhao
 
   useEffect(() => { fetchInitialData(); refreshUser?.(); }, []); // refreshUser: payAtShopBlocked fresh rakhne ke liye
-  const submittingRef = useRef(false); // setState async hota hai, double-tap ke liye ref
   useEffect(() => { fetchSlots(); }, [selectedDate, selectedStaff]);
 
   useEffect(() => {
@@ -47,28 +50,36 @@ const ShopDetailScreen = ({ route, navigation }) => {
 
   const fetchInitialData = async () => {
     try {
+      setLoadError(null);
       const [servicesRes, staffRes] = await Promise.all([
         serviceAPI.getByShop(shop._id),
         staffAPI.getByShop(shop._id),
       ]);
-      setServices(servicesRes.data.data);
-      setStaff(staffRes.data.data);
+      setServices(servicesRes.data.data || []);
+      setStaff(staffRes.data.data || []);
     } catch (err) {
       console.log('fetchInitialData error:', err);
+      setLoadError(getApiError(err, 'Could not load this shop.').message);
     } finally {
       setLoading(false);
     }
   };
 
   const fetchSlots = async () => {
+    const reqId = ++slotReqRef.current;
     setSlotsLoading(true);
+    setSlotsError(null);
     try {
       const res = await bookingAPI.getSlots(shop._id, selectedDate, selectedStaff?._id);
-      setSlots(res.data.data);
+      if (reqId !== slotReqRef.current) return;
+      setSlots(res.data.data || []);
     } catch (err) {
+      if (reqId !== slotReqRef.current) return;
       console.log('fetchSlots error:', err);
+      setSlots([]);
+      setSlotsError(getApiError(err, 'Could not load slots.').message);
     } finally {
-      setSlotsLoading(false);
+      if (reqId === slotReqRef.current) setSlotsLoading(false);
     }
   };
 
@@ -82,6 +93,12 @@ const ShopDetailScreen = ({ route, navigation }) => {
 
   const totalPrice    = selectedServices.reduce((sum, s) => sum + s.price, 0);
   const totalDuration = selectedServices.reduce((sum, s) => sum + s.durationMin, 0);
+
+  // Sirf UI hint ke liye. Asli faisla backend karta hai (response mein payment + paymentReason).
+  const today = toLocalYMD();
+  const isFutureDate = selectedDate > today; // YYYY-MM-DD string compare sahi chalta hai
+  const payAtShopBlocked = !!user?.payAtShopBlocked;
+  const needsPayment = isFutureDate || payAtShopBlocked;
 
   const goBack = () => navigation.goBack();
 
@@ -201,9 +218,38 @@ const ShopDetailScreen = ({ route, navigation }) => {
     });
   };
 
+  // Slot chip ke neeche chhota label: Booked / Pay to book / N holding
+  const getSlotNote = (slot) => {
+    if (!slot.available) return 'Booked';
+    if (slot.holdsFull) return 'Pay to book';
+    // unpaidHolds sirf tab sahi hai jab staff selected ho (backend contract)
+    if (selectedStaff && slot.unpaidHolds > 0) return `${slot.unpaidHolds} holding`;
+    return null;
+  };
+
+  const emptySlotsMessage = selectedDate === today
+    ? 'No slots left today. Try another date.'
+    : 'No slots available on this day. The shop may be closed.';
+
   if (loading) return (
     <View style={styles.loadingContainer}>
       <ActivityIndicator color={COLORS.accent} size="large" />
+    </View>
+  );
+
+  if (loadError) return (
+    <View style={styles.loadingContainer}>
+      <Ionicons name="cloud-offline-outline" size={48} color={COLORS.textMuted} />
+      <Text style={styles.errorTitle}>Couldn't load this shop</Text>
+      <Text style={styles.errorText}>{loadError}</Text>
+      <View style={{ flexDirection: 'row', marginTop: SPACING.md }}>
+        <TouchableOpacity style={[styles.proceedBtn, { marginRight: SPACING.sm, backgroundColor: COLORS.card, borderWidth: 1, borderColor: COLORS.border }]} onPress={goBack}>
+          <Text style={[styles.proceedBtnText, { color: COLORS.textPrimary }]}>Back</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.proceedBtn} onPress={() => { setLoading(true); fetchInitialData(); }}>
+          <Text style={styles.proceedBtnText}>Retry</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 
@@ -212,7 +258,7 @@ const ShopDetailScreen = ({ route, navigation }) => {
 
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+        <TouchableOpacity onPress={goBack} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="Go back">
           <Text style={styles.backIcon}>←</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle} numberOfLines={1}>{shop.name}</Text>
@@ -235,7 +281,7 @@ const ShopDetailScreen = ({ route, navigation }) => {
           <View style={styles.bannerOverlay}>
             <Text style={styles.bannerName}>{shop.name}</Text>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-              <Ionicons name="location-outline" size={11} color={COLORS.textSecondary} />
+              <Ionicons name="location-outline" size={11} color={COLORS.white} />
               <Text style={styles.bannerAddress}>{shop.address}</Text>
             </View>
             <View style={styles.bannerMeta}>
@@ -262,14 +308,12 @@ const ShopDetailScreen = ({ route, navigation }) => {
               style={[styles.tabBtn, tab === t && styles.tabBtnActive]}
               onPress={() => setTab(t)}
             >
-              <Text style={[styles.tabText, tab === t && styles.tabTextActive]}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Ionicons name={t === 'services' ? 'cut-outline' : 'calendar-outline'} size={15} color={tab === t ? COLORS.white: COLORS.textSecondary} />
-                  <Text style={[styles.tabText, tab === t && styles.tabTextActive]}>
-                    {t === 'services' ? 'Services' : 'Book Slot'}
-                  </Text>
-                </View>
-              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Ionicons name={t === 'services' ? 'cut-outline' : 'calendar-outline'} size={15} color={tab === t ? COLORS.white : COLORS.textSecondary} />
+                <Text style={[styles.tabText, tab === t && styles.tabTextActive]}>
+                  {t === 'services' ? 'Services' : 'Book Slot'}
+                </Text>
+              </View>
             </TouchableOpacity>
           ))}
         </View>
@@ -278,31 +322,41 @@ const ShopDetailScreen = ({ route, navigation }) => {
         {tab === 'services' && (
           <View style={styles.section}>
             <Text style={styles.sectionLabel}>Choose a Service</Text>
-            {services.map(service => (
-              <TouchableOpacity
-                key={service._id}
-                style={[styles.serviceCard, selectedServices.find(s => s._id === service._id) && styles.serviceCardActive]}
-                onPress={() => toggleService(service)}
-                activeOpacity={0.85}
-              >
-                <View style={styles.serviceLeft}>
-                  <Text style={styles.serviceName}>{service.name}</Text>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                    <Ionicons name="time-outline" size={11} color={COLORS.textSecondary} />
-                    <Text style={styles.serviceDuration}>{service.durationMin} mins</Text>
+            {services.length === 0 && (
+              <View style={styles.hintBox}>
+                <Text style={styles.hintText}>This shop has not added any services yet</Text>
+              </View>
+            )}
+            {services.map(service => {
+              const isSelected = !!selectedServices.find(s => s._id === service._id);
+              return (
+                <TouchableOpacity
+                  key={service._id}
+                  style={[styles.serviceCard, isSelected && styles.serviceCardActive]}
+                  onPress={() => toggleService(service)}
+                  activeOpacity={0.85}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: isSelected }}
+                >
+                  <View style={styles.serviceLeft}>
+                    <Text style={styles.serviceName}>{service.name}</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                      <Ionicons name="time-outline" size={11} color={COLORS.textSecondary} />
+                      <Text style={styles.serviceDuration}>{service.durationMin} mins</Text>
+                    </View>
+                    {!!service.description && <Text style={styles.serviceDesc}>{service.description}</Text>}
                   </View>
-                  {service.description && <Text style={styles.serviceDesc}>{service.description}</Text>}
-                </View>
-                <View style={styles.serviceRight}>
-                  <Text style={styles.servicePrice}>₹{service.price}</Text>
-                  <View style={[styles.selectBtn, selectedServices.find(s => s._id === service._id) && styles.selectBtnActive]}>
-                    {selectedServices.find(s => s._id === service._id)
-                      ? <Ionicons name="checkmark" size={12} color={COLORS.textPrimary} />
-                      : <Text style={styles.selectBtnText}>Select</Text>}
+                  <View style={styles.serviceRight}>
+                    <Text style={styles.servicePrice}>₹{service.price}</Text>
+                    <View style={[styles.selectBtn, isSelected && styles.selectBtnActive]}>
+                      {isSelected
+                        ? <Ionicons name="checkmark" size={12} color={COLORS.white} />
+                        : <Text style={styles.selectBtnText}>Select</Text>}
+                    </View>
                   </View>
-                </View>
-              </TouchableOpacity>
-            ))}
+                </TouchableOpacity>
+              );
+            })}
 
             {/* Staff Section */}
             {staff.length > 0 && (
@@ -312,7 +366,7 @@ const ShopDetailScreen = ({ route, navigation }) => {
                   {/* Any Staff option */}
                   <TouchableOpacity
                     style={[styles.staffCard, !selectedStaff && styles.staffCardActive]}
-                    onPress={() => setSelectedStaff(null)}
+                    onPress={() => { setSelectedStaff(null); setSelectedSlot(null); }}
                   >
                     <View style={styles.staffAvatar}>
                       <Ionicons name="shuffle-outline" size={20} color={COLORS.textSecondary} />
@@ -325,10 +379,10 @@ const ShopDetailScreen = ({ route, navigation }) => {
                     <TouchableOpacity
                       key={s._id}
                       style={[styles.staffCard, selectedStaff?._id === s._id && styles.staffCardActive]}
-                      onPress={() => setSelectedStaff(s)}
+                      onPress={() => { setSelectedStaff(s); setSelectedSlot(null); }}
                     >
                       <View style={[styles.staffAvatar, selectedStaff?._id === s._id && styles.staffAvatarActive]}>
-                        <Text style={styles.staffAvatarText}>
+                        <Text style={[styles.staffAvatarText, selectedStaff?._id === s._id && { color: COLORS.white }]}>
                           {s.name.charAt(0).toUpperCase()}
                         </Text>
                       </View>
@@ -353,41 +407,25 @@ const ShopDetailScreen = ({ route, navigation }) => {
             {selectedServices.length > 0 && (
               <View style={styles.recapCard}>
                 <View style={styles.recapRow}>
-                  <Text style={styles.selectedServiceText} numberOfLines={1}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, gap: 6 }}>
-                      <Ionicons name="cut-outline" size={14} color={COLORS.textPrimary} />
-                      <Text style={styles.selectedServiceText} numberOfLines={1}>
-                        {selectedServices.map(s => s.name).join(' + ')}
-                      </Text>
-                    </View>
-                  </Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, gap: 6 }}>
+                    <Ionicons name="cut-outline" size={14} color={COLORS.textPrimary} />
+                    <Text style={styles.selectedServiceText} numberOfLines={1}>
+                      {selectedServices.map(s => s.name).join(' + ')}
+                    </Text>
+                  </View>
                   <Text style={styles.selectedServicePrice}>₹{totalPrice}</Text>
                 </View>
-                
+
                 {selectedStaff && (
                   <>
                     <View style={styles.recapDivider} />
                     <View style={styles.recapRow}>
-                      <Text style={styles.selectedServiceText} numberOfLines={1}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, gap: 6 }}>
-                          <Ionicons name="person-outline" size={14} color={COLORS.textPrimary} />
-                          <Text style={styles.selectedServiceText} numberOfLines={1}>
-                            Service By
-                          </Text>
-                        </View>
-                      </Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, gap: 6 }}>
+                        <Ionicons name="person-outline" size={14} color={COLORS.textPrimary} />
+                        <Text style={styles.selectedServiceText} numberOfLines={1}>Service By</Text>
+                      </View>
                       <Text style={styles.selectedServicePrice}>{selectedStaff.name}</Text>
                     </View>
-                    
-                    {/* 
-                    <View style={styles.recapRow}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                        <Ionicons name="person-outline" size={13} color={COLORS.textPrimary} />
-                        <Text style={styles.selectedServiceText} numberOfLines={1}>Service By {selectedStaff.name}</Text>
-                      </View>
-                      <Text style={styles.recapSubtext} numberOfLines={1}>{selectedStaff.speciality?.join(', ')}</Text>
-                    </View> 
-                    */}
                   </>
                 )}
               </View>
@@ -416,34 +454,68 @@ const ShopDetailScreen = ({ route, navigation }) => {
               </View>
             ) : slotsLoading ? (
               <ActivityIndicator color={COLORS.accent} style={{ marginTop: SPACING.lg }} />
+            ) : slotsError ? (
+              <View style={styles.hintBox}>
+                <Text style={styles.hintText}>{slotsError}</Text>
+                <TouchableOpacity style={[styles.proceedBtn, { marginTop: SPACING.md }]} onPress={fetchSlots}>
+                  <Text style={styles.proceedBtnText}>Retry</Text>
+                </TouchableOpacity>
+              </View>
             ) : slots.length === 0 ? (
               <View style={styles.hintBox}>
-                <Text style={styles.hintText}>Shop is closed on this day</Text>
+                <Text style={styles.hintText}>{emptySlotsMessage}</Text>
               </View>
             ) : (
               <View style={styles.slotsGrid}>
-                {slots.map(slot => (
-                  <TouchableOpacity
-                    key={slot.time}
-                    style={[
-                      styles.slotChip,
-                      !slot.available && styles.slotChipTaken,
-                      selectedSlot === slot.time && styles.slotChipSelected,
-                    ]}
-                    onPress={() => slot.available && setSelectedSlot(slot.time)}
-                    disabled={!slot.available}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={[
-                      styles.slotText,
-                      !slot.available && styles.slotTextTaken,
-                      selectedSlot === slot.time && styles.slotTextSelected,
-                    ]}>
-                      {slot.time}
-                    </Text>
-                    {!slot.available && <Text style={styles.slotBooked}>Booked</Text>}
-                  </TouchableOpacity>
-                ))}
+                {slots.map(slot => {
+                  const note = getSlotNote(slot);
+                  const isSelected = selectedSlot === slot.time;
+                  return (
+                    <TouchableOpacity
+                      key={slot.time}
+                      style={[
+                        styles.slotChip,
+                        !slot.available && styles.slotChipTaken,
+                        isSelected && styles.slotChipSelected,
+                      ]}
+                      onPress={() => slot.available && setSelectedSlot(slot.time)}
+                      disabled={!slot.available}
+                      activeOpacity={0.8}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${formatTime12h(slot.time)}${note ? `, ${note}` : ''}`}
+                      accessibilityState={{ selected: isSelected, disabled: !slot.available }}
+                    >
+                      <Text style={[
+                        styles.slotText,
+                        !slot.available && styles.slotTextTaken,
+                        isSelected && styles.slotTextSelected,
+                      ]}>
+                        {formatTime12h(slot.time)}
+                      </Text>
+                      {!!note && (
+                        <Text style={[
+                          styles.slotBooked,
+                          slot.available && styles.slotHold,
+                          isSelected && { color: COLORS.white },
+                        ]}>
+                          {note}
+                        </Text>
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            )}
+
+            {/* Payment-required note */}
+            {selectedServices.length > 0 && needsPayment && (
+              <View style={styles.noteCard}>
+                <Ionicons name="card-outline" size={16} color={COLORS.textPrimary} />
+                <Text style={styles.noteText}>
+                  {payAtShopBlocked
+                    ? 'Online payment is required for your bookings because of earlier missed appointments.'
+                    : 'Bookings for a future date need online payment to be confirmed. Full refund if you cancel 2+ hours before the slot.'}
+                </Text>
               </View>
             )}
           </View>
@@ -473,12 +545,12 @@ const ShopDetailScreen = ({ route, navigation }) => {
       {selectedServices.length > 0 && selectedSlot && (
         <View style={styles.bottomBar}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.bottomService}>{selectedServices.map(s => s.name).join(' + ')}</Text>
+            <Text style={styles.bottomService} numberOfLines={1}>{selectedServices.map(s => s.name).join(' + ')}</Text>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
               <Ionicons name="calendar-outline" size={11} color={COLORS.textSecondary} />
-              <Text style={styles.bottomSlot}>{selectedDate}</Text>
+              <Text style={styles.bottomSlot}>{formatSlotDate(selectedDate)}</Text>
               <Ionicons name="time-outline" size={11} color={COLORS.textSecondary} style={{ marginLeft: 4 }} />
-              <Text style={styles.bottomSlot}>{selectedSlot}</Text>
+              <Text style={styles.bottomSlot}>{formatTime12h(selectedSlot)}</Text>
               {selectedStaff && (
                 <>
                   <Ionicons name="person-outline" size={11} color={COLORS.textSecondary} style={{ marginLeft: 4 }} />
@@ -486,9 +558,12 @@ const ShopDetailScreen = ({ route, navigation }) => {
                 </>
               )}
             </View>
+            <Text style={[styles.bottomSlot, needsPayment && { color: COLORS.accent, fontWeight: '600' }]}>
+              {needsPayment ? 'Online payment required to confirm' : 'Pay at shop or online'}
+            </Text>
           </View>
           <Button
-            title={`Book ₹${totalPrice}`}
+            title={`${needsPayment ? 'Pay' : 'Book'} ₹${totalPrice}`}
             onPress={() => handleBooking()}
             loading={booking}
             style={{ minWidth: 130 }}
@@ -501,7 +576,9 @@ const ShopDetailScreen = ({ route, navigation }) => {
 
 const styles = StyleSheet.create({
   container:        { flex: 1, backgroundColor: COLORS.background },
-  loadingContainer: { flex: 1, backgroundColor: COLORS.background, alignItems: 'center', justifyContent: 'center' },
+  loadingContainer: { flex: 1, backgroundColor: COLORS.background, alignItems: 'center', justifyContent: 'center', padding: SPACING.lg },
+  errorTitle:       { color: COLORS.textPrimary, fontSize: FONTS.sizes.lg, fontWeight: '600', marginTop: SPACING.md },
+  errorText:        { color: COLORS.textSecondary, fontSize: FONTS.sizes.sm, marginTop: 4, textAlign: 'center' },
 
   header:      { flexDirection: 'row', alignItems: 'center', paddingHorizontal: SPACING.md, paddingTop: SPACING.xl + 20, paddingBottom: SPACING.md },
   backBtn:     { width: 40, height: 40, borderRadius: 20, backgroundColor: COLORS.card, alignItems: 'center', justifyContent: 'center' },
@@ -509,14 +586,13 @@ const styles = StyleSheet.create({
   headerTitle: { flex: 1, textAlign: 'center', color: COLORS.textPrimary, fontSize: FONTS.sizes.lg, fontWeight: '700' },
 
   banner:        { height: 180, backgroundColor: COLORS.card, alignItems: 'center', justifyContent: 'center', marginHorizontal: SPACING.lg, borderRadius: RADIUS.xl, borderWidth: 1, borderColor: COLORS.border, overflow: 'hidden' },
-  bannerEmoji:   { fontSize: 60 },
-  bannerImage: { width: Dimensions.get('window').width - SPACING.lg * 2, height: 180 },
+  bannerImage:   { width: Dimensions.get('window').width - SPACING.lg * 2, height: 180 },
   bannerOverlay: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: SPACING.md, backgroundColor: 'rgba(0,0,0,0.65)' },
   bannerName:    { color: COLORS.white, fontSize: FONTS.sizes.lg, fontWeight: '700' },
-  bannerAddress: { color: COLORS.textSecondary, fontSize: FONTS.sizes.xs, marginTop: 2 },
+  bannerAddress: { color: COLORS.white, fontSize: FONTS.sizes.xs, marginTop: 2 },
   bannerMeta:    { flexDirection: 'row', alignItems: 'center', gap: SPACING.xs, marginTop: 4 },
-  metaText:      { color: COLORS.textSecondary, fontSize: FONTS.sizes.xs },
-  metaDot:       { color: COLORS.textMuted },
+  metaText:      { color: COLORS.white, fontSize: FONTS.sizes.xs },
+  metaDot:       { color: COLORS.white },
   statusDot:     { width: 6, height: 6, borderRadius: 3 },
 
   tabRow:        { flexDirection: 'row', margin: SPACING.lg, backgroundColor: COLORS.card, borderRadius: RADIUS.md, padding: 4 },
@@ -544,21 +620,16 @@ const styles = StyleSheet.create({
   staffCardActive:  { borderColor: COLORS.accent, backgroundColor: COLORS.accent + '15' },
   staffAvatar:      { width: 52, height: 52, borderRadius: 26, backgroundColor: COLORS.cardLight, alignItems: 'center', justifyContent: 'center', marginBottom: SPACING.xs },
   staffAvatarActive:{ backgroundColor: COLORS.accent },
-  staffAvatarText:  { fontSize: 22 },
+  staffAvatarText:  { fontSize: 22, color: COLORS.textPrimary },
   staffName:        { color: COLORS.textSecondary, fontSize: FONTS.sizes.xs, fontWeight: '600', textAlign: 'center' },
   staffNameActive:  { color: COLORS.accent },
   staffSpec:        { color: COLORS.textMuted, fontSize: 10, textAlign: 'center', marginTop: 2 },
 
-  selectedServiceBar:   { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: COLORS.accent + '15', borderRadius: RADIUS.md, padding: SPACING.md, marginBottom: SPACING.sm, borderWidth: 1, borderColor: COLORS.accent + '50', width: '100%' },
-  selectedServiceText:  { color: COLORS.textPrimary, fontWeight: '600', fontSize: FONTS.sizes.sm, flex: 1, },
-  selectedServicePrice: { color: COLORS.accent, fontWeight: '700', fontSize: FONTS.sizes.md, },
+  selectedServiceText:  { color: COLORS.textPrimary, fontWeight: '600', fontSize: FONTS.sizes.sm, flex: 1 },
+  selectedServicePrice: { color: COLORS.accent, fontWeight: '700', fontSize: FONTS.sizes.md },
   recapCard:    { backgroundColor: COLORS.accent + '15', borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.accent + '50', marginBottom: SPACING.md, overflow: 'hidden' },
   recapRow:     { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: SPACING.md },
   recapDivider: { height: 1, backgroundColor: COLORS.accent + '30' },
-  recapSubtext: { color: COLORS.textSecondary, fontSize: FONTS.sizes.xs, flexShrink: 1, textAlign: 'right', marginLeft: SPACING.sm },
-  proceedBar:        { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: COLORS.accent + '15', borderRadius: RADIUS.md, padding: SPACING.md, marginHorizontal: SPACING.lg, marginTop: SPACING.md, marginBottom: SPACING.sm, borderWidth: 1.5, borderColor: COLORS.accent, gap: SPACING.sm, ...SHADOWS.small },
-  proceedArrow:      { width: 28, height: 28, borderRadius: 14, backgroundColor: COLORS.accent, alignItems: 'center', justifyContent: 'center' },
-  proceedArrowText:  { color: COLORS.white, fontSize: 14, fontWeight: '700' },
 
   dateCard:       { width: 58, height: 70, borderRadius: RADIUS.md, backgroundColor: COLORS.card, borderWidth: 1.5, borderColor: COLORS.border, alignItems: 'center', justifyContent: 'center', marginRight: SPACING.sm },
   dateCardActive: { backgroundColor: COLORS.accent, borderColor: COLORS.accent },
@@ -575,9 +646,13 @@ const styles = StyleSheet.create({
   slotTextTaken:    { textDecorationLine: 'line-through' },
   slotTextSelected: { color: COLORS.white, fontWeight: '700' },
   slotBooked:       { color: COLORS.textMuted, fontSize: 9, marginTop: 1 },
+  slotHold:         { color: COLORS.warning, fontWeight: '600' },
 
   hintBox:  { backgroundColor: COLORS.card, borderRadius: RADIUS.md, padding: SPACING.lg, alignItems: 'center', borderWidth: 1, borderColor: COLORS.border },
-  hintText: { color: COLORS.textMuted, fontSize: FONTS.sizes.sm },
+  hintText: { color: COLORS.textMuted, fontSize: FONTS.sizes.sm, textAlign: 'center' },
+
+  noteCard: { flexDirection: 'row', alignItems: 'flex-start', gap: SPACING.sm, marginTop: SPACING.md, padding: SPACING.md, borderRadius: RADIUS.md, backgroundColor: COLORS.warning + '18', borderWidth: 1, borderColor: COLORS.warning + '40' },
+  noteText: { flex: 1, color: COLORS.textPrimary, fontSize: FONTS.sizes.xs, lineHeight: 17 },
 
   bottomBar: { position: 'absolute', bottom: 60, left: 0, right: 0, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: COLORS.card, padding: SPACING.md, borderTopWidth: 1, borderTopColor: COLORS.border, gap: SPACING.md, ...SHADOWS.medium },
   bottomService: { color: COLORS.textPrimary, fontWeight: '600', fontSize: FONTS.sizes.sm },

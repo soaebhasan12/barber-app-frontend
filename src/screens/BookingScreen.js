@@ -6,8 +6,31 @@ import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, 
 import { COLORS, FONTS, SPACING, RADIUS, SHADOWS } from '../constants/theme';
 import { bookingAPI, reviewAPI, getApiError } from '../services/api';
 import { formatTime12h, formatSlotDate, toLocalYMD } from '../utils/time';
+import { startPayment } from '../services/payment';
+import { useAuth } from '../context/AuthContext';
 
 const MAX_COMMENT_LENGTH = 500;
+
+const formatCountdown = (ms) => {
+  const s = Math.max(0, Math.floor(ms / 1000));
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+};
+
+// Alag component isliye ki BookingCard plain function hai, usme hooks nahi chalte
+const PayCountdown = ({ deadline, onExpire }) => {
+  const [left, setLeft] = useState(() => new Date(deadline).getTime() - Date.now());
+  useEffect(() => {
+    const tick = () => {
+      const ms = new Date(deadline).getTime() - Date.now();
+      setLeft(ms);
+      if (ms <= 0) { clearInterval(id); onExpire?.(); }
+    };
+    const id = setInterval(tick, 1000);
+    tick();
+    return () => clearInterval(id);
+  }, [deadline]);
+  return <Text style={styles.countdownText}>Pay within {formatCountdown(left)}</Text>;
+};
 
 const BookingScreen = () => {
   const [bookings, setBookings] = useState([]);
@@ -29,6 +52,8 @@ const BookingScreen = () => {
   const [fetchError, setFetchError] = useState(null);
   const [cancellingId, setCancellingId] = useState(null);
   const slotReqRef = useRef(0);
+  const { user } = useAuth();
+  const [payingId, setPayingId] = useState(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -116,11 +141,11 @@ const BookingScreen = () => {
     if (rescheduleModal && newDate) fetchSlotsForReschedule(newDate);
   }, [rescheduleModal, newDate]);
 
-  const confirmReschedule = async () => {
+  const confirmReschedule = async (extra = {}) => {
     if (!newSlot) return;
     setRescheduling(true);
     try {
-      await bookingAPI.reschedule(rescheduleBooking._id, newDate, newSlot);
+      await bookingAPI.reschedule(rescheduleBooking._id, newDate, newSlot, extra);
       Alert.alert('Success', 'Booking rescheduled! Waiting for owner confirmation.');
       setRescheduleModal(false);
       fetchBookings();
@@ -129,6 +154,17 @@ const BookingScreen = () => {
       const e = getApiError(err, 'Failed to reschedule');
       if (e.code === 'PAYMENT_REQUIRED') {
         Alert.alert('Payment required', 'Future-dated bookings need online payment. Please cancel this booking and book again with payment.');
+      } else if (e.status === 409 && e.code === 'SLOT_HELD') {
+        const n = e.data?.holdCount ?? e.data?.data?.holdCount;
+        const who = n ? `${n} customer${n > 1 ? 's' : ''} already hold` : 'Other customers already hold';
+        Alert.alert('Slot already held', `${who} this slot without paying. If one of them pays first, you could lose it.`, [
+          { text: 'Pick another slot', style: 'cancel', onPress: () => { setNewSlot(null); fetchSlotsForReschedule(newDate); } },
+          { text: 'Book anyway', onPress: () => confirmReschedule({ confirmHold: true }) },
+        ]);
+      } else if (e.status === 409 && e.code === 'HOLDS_FULL') {
+        Alert.alert('Slot is full', 'All waiting spots for this slot are taken. Please pick another slot.');
+        setNewSlot(null);
+        fetchSlotsForReschedule(newDate);
       } else if (e.status === 409) {
         Alert.alert('Slot not available', e.message || 'This slot was just taken. Please pick another.');
         setNewSlot(null);
@@ -191,6 +227,42 @@ const BookingScreen = () => {
     );
   };
 
+  const isAwaitingPayment = (b) =>
+    (b.status === 'pending' || b.status === 'confirmed') &&
+    b.paymentStatus !== 'paid' &&
+    !!b.paymentDeadline &&
+    new Date(b.paymentDeadline).getTime() > Date.now();
+
+  const handlePayNow = async (booking) => {
+    if (payingId) return;
+    setPayingId(booking._id);
+    try {
+      const result = await startPayment({
+        booking,
+        order: null, // helper khud /payments/create-order call karta hai
+        shopName: booking.shopId?.name,
+        description: (booking.services || []).map(s => s.name).join(' + '),
+        user,
+      });
+      if (result.status === 'busy') return;
+      if (result.status === 'paid') {
+        Alert.alert('Payment successful', 'Your booking is confirmed.');
+      } else if (result.status === 'verify_pending') {
+        Alert.alert('Payment received', result.message);
+      } else if (result.status === 'cancelled') {
+        Alert.alert('Payment not completed', result.message);
+      } else {
+        Alert.alert(['expired', 'slot_taken'].includes(result.status) ? 'Slot not secured' : 'Payment failed', result.message);
+      }
+      fetchBookings();
+    } catch (err) {
+      console.log('handlePayNow error:', err);
+      Alert.alert('Error', 'Something went wrong. Please try again.');
+    } finally {
+      setPayingId(null);
+    }
+  };
+
   const getStatusColor = (status) => {
     if (status === 'confirmed')  return COLORS.success;
     if (status === 'cancelled' || status === 'no_show') return COLORS.error;
@@ -199,13 +271,14 @@ const BookingScreen = () => {
   };
 
   const BookingCard = ({ item }) => {
+    const awaiting = isAwaitingPayment(item);
     return (
         <View style={styles.card}>
           <View style={styles.cardHeader}>
             <Text style={styles.shopName}>{item.shopId?.name || 'Shop'}</Text>
             <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) + '25' }]}>
               <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>
-                {(item.status || '').replace('_', ' ').toUpperCase()}
+                {awaiting ? 'AWAITING PAYMENT' : (item.status || '').replace('_', ' ').toUpperCase()}
               </Text>
             </View>
           </View>
@@ -258,14 +331,33 @@ const BookingScreen = () => {
             </View>
           )}
 
+          {awaiting && (
+            <View style={styles.payBox}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.payBoxTitle}>Payment pending</Text>
+                <PayCountdown deadline={item.paymentDeadline} onExpire={fetchBookings} />
+              </View>
+              <TouchableOpacity
+                style={styles.payBtn}
+                onPress={() => handlePayNow(item)}
+                disabled={payingId === item._id}
+                accessibilityRole="button"
+              >
+                <Text style={styles.payBtnText}>{payingId === item._id ? 'Opening...' : `Pay ₹${item.amount}`}</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
           {(item.status === 'pending' || item.status === 'confirmed') && (
             <View style={{ flexDirection: 'row', gap: SPACING.sm, marginTop: SPACING.sm }}>
               <TouchableOpacity style={[styles.cancelBtn, { flex: 1, marginTop: 0 }]} onPress={() => handleCancel(item)} disabled={cancellingId === item._id}>
                 <Text style={styles.cancelBtnText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.rescheduleBtn, { flex: 1 }]} onPress={() => openReschedule(item)}>
-                <Text style={styles.rescheduleBtnText}>Reschedule</Text>
-              </TouchableOpacity>
+              {!awaiting && (
+                <TouchableOpacity style={[styles.rescheduleBtn, { flex: 1 }]} onPress={() => openReschedule(item)}>
+                  <Text style={styles.rescheduleBtnText}>Reschedule</Text>
+                </TouchableOpacity>
+              )}
             </View>
           )}
 
@@ -419,7 +511,7 @@ const BookingScreen = () => {
               <TouchableOpacity style={[styles.modalBtn, { borderColor: COLORS.border }]} onPress={() => setRescheduleModal(false)} disabled={rescheduling}>
                 <Text style={{ color: COLORS.textSecondary }}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.modalBtn, { backgroundColor: COLORS.accent }]} onPress={confirmReschedule} disabled={!newSlot || rescheduling}>
+              <TouchableOpacity style={[styles.modalBtn, { backgroundColor: COLORS.accent }]} onPress={() => confirmReschedule()} disabled={!newSlot || rescheduling}>
                 <Text style={{ color: COLORS.white, fontWeight: '600' }}>{rescheduling ? 'Saving...' : 'Confirm'}</Text>
               </TouchableOpacity>
             </View>
@@ -449,6 +541,12 @@ const styles = StyleSheet.create({
   infoPrice:   { color: COLORS.accent, fontWeight: '700', fontSize: FONTS.sizes.sm },
   paidBadge:     { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.success + '20', borderRadius: RADIUS.full, paddingHorizontal: SPACING.sm, paddingVertical: 2, borderWidth: 1, borderColor: COLORS.success + '40' },
   paidBadgeText: { color: COLORS.success, fontSize: FONTS.sizes.xs, fontWeight: '700' },
+
+  payBox:        { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, marginTop: SPACING.sm, padding: SPACING.sm, borderRadius: RADIUS.md, backgroundColor: COLORS.warning + '18', borderWidth: 1, borderColor: COLORS.warning + '40' },
+  payBoxTitle:   { color: COLORS.textPrimary, fontWeight: '700', fontSize: FONTS.sizes.sm },
+  countdownText: { color: COLORS.textSecondary, fontSize: FONTS.sizes.xs, fontWeight: '600', marginTop: 2 },
+  payBtn:        { backgroundColor: COLORS.accent, paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm, borderRadius: RADIUS.md },
+  payBtnText:    { color: COLORS.white, fontWeight: '700', fontSize: FONTS.sizes.sm },
 
   emptyEmoji:   { fontSize: 48, marginBottom: SPACING.md },
   emptyText:    { color: COLORS.textPrimary, fontSize: FONTS.sizes.lg, fontWeight: '600' },
