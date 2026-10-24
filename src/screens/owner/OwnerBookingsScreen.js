@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useCallback } from 'react';
@@ -16,8 +16,9 @@ const OwnerBookingsScreen = () => {
   const [updatingId, setUpdatingId] = useState(null);
 
   const [now, setNow] = useState(Date.now());
+  const clockOffset = useRef(0);
   useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 15000);
+    const id = setInterval(() => setNow(Date.now() + clockOffset.current), 15000);
     return () => clearInterval(id);
   }, []);
 
@@ -34,6 +35,13 @@ const OwnerBookingsScreen = () => {
       const id = shopRes.data.data.shop._id;
       setShopId(id);
       const res = await bookingAPI.getShopBookings(id);
+      
+      const serverDate = res.headers?.date;
+      if (serverDate) {
+        clockOffset.current = new Date(serverDate).getTime() - Date.now();
+        setNow(Date.now() + clockOffset.current);
+      }
+      
       setBookings(res.data.data);
     } catch (err) {
       console.log('error:', err);
