@@ -16,6 +16,25 @@ const getCheckout = () => {
   }
 };
 
+// Android SDK kabhi err.description mein poora JSON string deta hai. Parse karke saaf values nikalo.
+const parseCheckoutError = (err) => {
+  let desc = err?.description ?? err?.error?.description ?? '';
+  let reason = err?.error?.reason || '';
+  let step = err?.error?.step || '';
+  let source = err?.error?.source || '';
+  if (typeof desc === 'string' && desc.trim().startsWith('{')) {
+    try {
+      const inner = JSON.parse(desc)?.error || {};
+      desc = inner.description || '';
+      reason = inner.reason || reason;
+      step = inner.step || step;
+      source = inner.source || source;
+    } catch (_) { desc = ''; }
+  }
+  if (typeof desc !== 'string' || desc === 'undefined') desc = '';
+  return { desc, reason, step, source };
+};
+
 /**
  * Returns { status, message }
  * status: 'paid' | 'verify_pending' | 'cancelled' | 'failed' | 'expired' | 'slot_taken' | 'busy'
@@ -62,10 +81,11 @@ export const startPayment = async ({ booking, order = null, shopName, descriptio
       });
     } catch (err) {
       console.log('Razorpay checkout error:', err);
-      const detail = err?.description || err?.error?.description || '';
-      const cancelled = err?.code === 'PAYMENT_CANCELLED' || /cancel/i.test(detail);
-      if (cancelled) return { status: 'cancelled', message: 'Payment cancelled.' };
-      return { status: 'failed', message: detail || 'Payment failed. Please try again.' };
+      const { desc, reason, step, source } = parseCheckoutError(err);
+      const abandoned = source === 'customer' && step === 'payment_authentication' && !desc;
+      const cancelled = err?.code === 0 || err?.code === 'PAYMENT_CANCELLED' || reason === 'payment_cancelled' || abandoned || /cancel/i.test(desc);
+      if (cancelled) return { status: 'cancelled', message: 'Payment was not completed.' };
+      return { status: 'failed', message: desc || 'Payment could not be completed. If any amount was debited, it will be refunded automatically. You can try again.' };
     }
 
     try {
