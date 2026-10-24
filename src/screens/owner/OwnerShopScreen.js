@@ -32,7 +32,7 @@ const OwnerShopScreen = () => {
   const [editingStaffId, setEditingStaffId] = useState(null);
   const [editingServiceId, setEditingServiceId] = useState(null);
   
-  const [shopInfo, setShopInfo] = useState({ name: '', phone: '', address: '', category: 'unisex' });
+  const [shopInfo, setShopInfo] = useState({ name: '', phone: '', address: '', category: 'unisex', noShowGraceMin: '15', maxUnpaidHoldsPerSlot: '2' });
   const [savingShopInfo, setSavingShopInfo] = useState(false);
   const [registering, setRegistering] = useState(false);
   const [regForm, setRegForm] = useState({ name: '', phone: '', address: '', category: 'unisex' });
@@ -113,6 +113,8 @@ const OwnerShopScreen = () => {
         phone: shopData.phone,
         address: shopData.address,
         category: shopData.category,
+        noShowGraceMin: String(shopData.noShowGraceMin ?? 15),
+        maxUnpaidHoldsPerSlot: String(shopData.maxUnpaidHoldsPerSlot ?? 2),
       });
     } catch (err) {
       if (err.response?.status === 404) {
@@ -341,9 +343,15 @@ const OwnerShopScreen = () => {
     if (!isValidPhone(shopInfo.phone)) {
       return Alert.alert('Error', 'Phone number must be exactly 10 digits');
     }
+
+    const grace = Number(shopInfo.noShowGraceMin);
+    const holds = Number(shopInfo.maxUnpaidHoldsPerSlot);
+    if (!Number.isInteger(grace) || grace < 5 || grace > 60) return Alert.alert('Error', 'No-show grace period must be 5 to 60 minutes');
+    if (!Number.isInteger(holds) || holds < 1 || holds > 5) return Alert.alert('Error', 'Unpaid holds per slot must be 1 to 5');
+
     setSavingShopInfo(true);
     try {
-      await shopAPI.update(shopInfo);
+      await shopAPI.update({ ...shopInfo, noShowGraceMin: grace, maxUnpaidHoldsPerSlot: holds });
       fetchData();
       Alert.alert('Success', 'Shop details updated');
     } catch (err) {
@@ -629,6 +637,9 @@ const OwnerShopScreen = () => {
                 </TouchableOpacity>
               ))}
             </View>
+            
+            <Input label="No-show grace period (minutes, 5-60)" value={shopInfo.noShowGraceMin} onChangeText={t => setShopInfo({ ...shopInfo, noShowGraceMin: t.replace(/\D/g, '') })} placeholder="e.g. 15" keyboardType="number-pad" maxLength={2} />
+            <Input label="Unpaid holds per slot (1-5)" value={shopInfo.maxUnpaidHoldsPerSlot} onChangeText={t => setShopInfo({ ...shopInfo, maxUnpaidHoldsPerSlot: t.replace(/\D/g, '') })} placeholder="e.g. 2" keyboardType="number-pad" maxLength={1} />
 
             <Button title="Save Changes" onPress={handleSaveShopInfo} loading={savingShopInfo} />
           </View>
