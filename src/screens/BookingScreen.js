@@ -272,7 +272,12 @@ const BookingScreen = () => {
 
   const BookingCard = ({ item }) => {
     const awaiting = isAwaitingPayment(item);
-    const canPayOnline = (item.status === 'pending' || item.status === 'confirmed') && item.paymentStatus === 'unpaid' && !item.paymentDeadline && item.amount >= 1 && item.slotDate >= toLocalYMD();
+    const [sy, sm, sd] = (item.slotDate || '').split('-').map(Number);
+    const [sh, smin] = (item.slotTime || '').split(':').map(Number);
+    const msLeft = new Date(sy, sm - 1, sd, sh, smin).getTime() - Date.now();
+    const slotPassed = msLeft <= 0;
+    const canReschedule = !awaiting && msLeft >= 2 * 3600000;
+    const canPayOnline = (item.status === 'pending' || item.status === 'confirmed') && item.paymentStatus === 'unpaid' && !item.paymentDeadline && item.amount >= 1 && !slotPassed;
     
     return (
         <View style={styles.card}>
@@ -363,16 +368,20 @@ const BookingScreen = () => {
           )}
 
           {(item.status === 'pending' || item.status === 'confirmed') && (
-            <View style={{ flexDirection: 'row', gap: SPACING.sm, marginTop: SPACING.sm }}>
-              <TouchableOpacity style={[styles.cancelBtn, { flex: 1, marginTop: 0 }]} onPress={() => handleCancel(item)} disabled={cancellingId === item._id}>
-                <Text style={styles.cancelBtnText}>Cancel</Text>
-              </TouchableOpacity>
-              {!awaiting && (
-                <TouchableOpacity style={[styles.rescheduleBtn, { flex: 1 }]} onPress={() => openReschedule(item)}>
-                  <Text style={styles.rescheduleBtnText}>Reschedule</Text>
+            slotPassed ? (
+              <Text style={styles.passedText}>This slot time has passed. Please contact the shop if you still want to be served.</Text>
+            ) : (
+              <View style={{ flexDirection: 'row', gap: SPACING.sm, marginTop: SPACING.sm }}>
+                <TouchableOpacity style={[styles.cancelBtn, { flex: 1, marginTop: 0 }]} onPress={() => handleCancel(item)} disabled={cancellingId === item._id}>
+                  <Text style={styles.cancelBtnText}>Cancel</Text>
                 </TouchableOpacity>
-              )}
-            </View>
+                {canReschedule && (
+                  <TouchableOpacity style={[styles.rescheduleBtn, { flex: 1 }]} onPress={() => openReschedule(item)}>
+                    <Text style={styles.rescheduleBtnText}>Reschedule</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            )
           )}
 
           {item.status === 'completed' && (
@@ -561,6 +570,7 @@ const styles = StyleSheet.create({
   countdownText: { color: COLORS.textSecondary, fontSize: FONTS.sizes.xs, fontWeight: '600', marginTop: 2 },
   payBtn:        { backgroundColor: COLORS.accent, paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm, borderRadius: RADIUS.md },
   payBtnText:    { color: COLORS.white, fontWeight: '700', fontSize: FONTS.sizes.sm },
+  passedText: { color: COLORS.textSecondary, fontSize: FONTS.sizes.xs, marginTop: SPACING.sm, textAlign: 'center' },
 
   emptyEmoji:   { fontSize: 48, marginBottom: SPACING.md },
   emptyText:    { color: COLORS.textPrimary, fontSize: FONTS.sizes.lg, fontWeight: '600' },
