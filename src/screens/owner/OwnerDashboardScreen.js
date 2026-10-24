@@ -6,6 +6,8 @@ import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity
 import { COLORS, FONTS, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
 import { bookingAPI, shopAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import { toLocalYMD, formatTime12h } from '../../utils/time';
+import OwnerSlotGrid from '../../components/OwnerSlotGrid';
 
 const OwnerDashboardScreen = () => {
   const { user } = useAuth();
@@ -14,7 +16,7 @@ const OwnerDashboardScreen = () => {
   const [loading, setLoading]   = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError]       = useState(null);
-  const today = new Date().toISOString().split('T')[0];
+  const [tick, setTick] = useState(0);
 
   useFocusEffect(
     useCallback(() => {
@@ -28,8 +30,9 @@ const OwnerDashboardScreen = () => {
       const shopRes = await shopAPI.getMyShop();
       const shopData = shopRes.data.data.shop;
       setShop(shopData);
-      const bookingRes = await bookingAPI.getShopBookings(shopData._id, today);
+      const bookingRes = await bookingAPI.getShopBookings(shopData._id, toLocalYMD());
       setBookings(bookingRes.data.data);
+      setTick(t => t + 1);
     } catch (err) {
       console.log('fetchData error:', err);
       setError('Failed to load dashboard. Pull down to retry.');
@@ -145,7 +148,7 @@ const OwnerDashboardScreen = () => {
           bookings.slice(0, 5).map(b => (
             <View key={b._id} style={styles.bookingRow}>
               <View style={styles.timeBox}>
-                <Text style={styles.timeText}>{b.slotTime}</Text>
+                <Text style={styles.timeText}>{formatTime12h(b.slotTime)}</Text>
               </View>
               <View style={styles.bookingInfo}>
                 <Text style={styles.customerName}>{b.userId?.name || 'Customer'}</Text>
@@ -159,13 +162,14 @@ const OwnerDashboardScreen = () => {
               </View>
               <View style={[styles.badge, { backgroundColor: getStatusColor(b.status) + '25' }]}>
                 <Text style={[styles.badgeText, { color: getStatusColor(b.status) }]}>
-                  {b.status}
+                  {(b.status || '').replace('_', ' ')}
                 </Text>
               </View>
             </View>
           ))
         )}
       </View>
+      <OwnerSlotGrid shopId={shop?._id} refreshKey={tick} />
     </ScrollView>
   );
 };
@@ -199,7 +203,7 @@ const styles = StyleSheet.create({
   emptyText: { color: COLORS.textMuted, fontSize: FONTS.sizes.sm },
 
   bookingRow:   { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.card, borderRadius: RADIUS.md, padding: SPACING.sm, marginBottom: SPACING.sm, borderWidth: 1, borderColor: COLORS.border, gap: SPACING.sm },
-  timeBox:      { backgroundColor: COLORS.accent + '20', borderRadius: RADIUS.sm, padding: SPACING.sm, minWidth: 52, alignItems: 'center' },
+  timeBox:      { backgroundColor: COLORS.accent + '20', borderRadius: RADIUS.sm, padding: SPACING.sm, minWidth: 76, alignItems: 'center' },
   timeText:     { color: COLORS.accent, fontWeight: '700', fontSize: FONTS.sizes.sm },
   bookingInfo:  { flex: 1 },
   customerName: { color: COLORS.textPrimary, fontWeight: '600', fontSize: FONTS.sizes.sm },
