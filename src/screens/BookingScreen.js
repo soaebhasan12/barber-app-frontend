@@ -272,6 +272,8 @@ const BookingScreen = () => {
 
   const BookingCard = ({ item }) => {
     const awaiting = isAwaitingPayment(item);
+    const canPayOnline = (item.status === 'pending' || item.status === 'confirmed') && item.paymentStatus === 'unpaid' && !item.paymentDeadline && item.amount >= 1 && item.slotDate >= toLocalYMD();
+    
     return (
         <View style={styles.card}>
           <View style={styles.cardHeader}>
@@ -343,6 +345,18 @@ const BookingScreen = () => {
                 disabled={payingId === item._id}
                 accessibilityRole="button"
               >
+                <Text style={styles.payBtnText}>{payingId === item._id ? 'Opening...' : `Pay ₹${item.amount}`}</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {canPayOnline && (
+            <View style={styles.payBox}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.payBoxTitle}>Pay at shop</Text>
+                <Text style={styles.countdownText}>Pay online to guarantee your slot</Text>
+              </View>
+              <TouchableOpacity style={styles.payBtn} onPress={() => handlePayNow(item)} disabled={payingId === item._id} accessibilityRole="button">
                 <Text style={styles.payBtnText}>{payingId === item._id ? 'Opening...' : `Pay ₹${item.amount}`}</Text>
               </TouchableOpacity>
             </View>
