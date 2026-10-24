@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert, ScrollView } from 'react-native';
 import { COLORS, FONTS, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
-import { bookingAPI, shopAPI } from '../../services/api';
+import { bookingAPI, shopAPI, getApiError } from '../../services/api';
+import { formatTime12h, formatSlotDate, toLocalYMD } from '../../utils/time';
 
 const OwnerBookingsScreen = () => {
   const [bookings, setBookings] = useState([]);
@@ -13,6 +14,12 @@ const OwnerBookingsScreen = () => {
   const [filter, setFilter]     = useState('pending');
   const [error, setError]       = useState(null);
   const [updatingId, setUpdatingId] = useState(null);
+
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 15000);
+    return () => clearInterval(id);
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
@@ -36,23 +43,33 @@ const OwnerBookingsScreen = () => {
     }
   };
 
-  const updateStatus = async (bookingId, status) => {
+  const updateStatus = (bookingId, status) => {
+    const b = bookings.find(x => x._id === bookingId);
     const action = status === 'confirmed' ? 'Confirm' : status === 'completed' ? 'Complete' : status === 'no_show' ? 'Mark as No-Show' : 'Cancel';
-    
-    Alert.alert(`${action} Booking`, `Are you sure?`, [
+    let msg = 'Are you sure?';
+    if (status === 'no_show') msg = 'The customer will be marked as a no-show. After 2 no-shows, Pay at Shop is disabled for them.';
+    if (status === 'cancelled' && b?.paymentStatus === 'paid') msg = 'This booking is paid. The customer will get a full automatic refund.';
+
+    Alert.alert(`${action} Booking`, msg, [
       { text: 'No', style: 'cancel' },
       {
         text: 'Yes', onPress: async () => {
           setUpdatingId(bookingId);
           try {
             if (status === 'cancelled') {
-              await bookingAPI.cancel(bookingId, 'Cancelled by owner');
+              const res = await bookingAPI.cancel(bookingId, 'Cancelled by owner');
+              if (res.data?.data?.refund === 'failed') {
+                Alert.alert('Refund pending', 'The automatic refund failed. Please refund this payment manually from the Razorpay dashboard.');
+              }
             } else {
               await bookingAPI.updateStatus(bookingId, status);
             }
             await fetchShopAndBookings();
           } catch (err) {
-            Alert.alert('Error', err.response?.data?.message || 'Failed to update booking');
+            console.log('updateStatus error:', err);
+            const e = getApiError(err, 'Failed to update booking');
+            Alert.alert('Error', e.message);
+            if (e.status === 409 || e.status === 400) fetchShopAndBookings(); // booking pehle hi badal chuki hai
           } finally {
             setUpdatingId(null);
           }
@@ -60,6 +77,7 @@ const OwnerBookingsScreen = () => {
       }
     ]);
   };
+
   const filtered = bookings.filter(b => b.status === filter);
 
   const counts = ['pending', 'confirmed', 'completed', 'cancelled', 'no_show'].reduce((acc, f) => {
@@ -68,7 +86,14 @@ const OwnerBookingsScreen = () => {
   }, {});
 
   const BookingCard = ({ item }) => {
-    const isToday = item.slotDate === new Date().toISOString().split('T')[0];
+    const isToday = item.slotDate === toLocalYMD();
+    const [sy, sm, sd] = (item.slotDate || '').split('-').map(Number);
+    const [sh, smin] = (item.slotTime || '').split(':').map(Number);
+    const slotStartMs = new Date(sy, sm - 1, sd, sh, smin).getTime();
+    const graceEndMs = item.graceEndsAt ? new Date(item.graceEndsAt).getTime() : slotStartMs + 15 * 60000;
+    const graceOver = now >= graceEndMs;
+    const awaitingArrival = item.status === 'confirmed' && now >= slotStartMs && !graceOver;
+    const graceMinsLeft = Math.max(1, Math.ceil((graceEndMs - now) / 60000));
     return (
       <View style={styles.card}>
         <View style={styles.cardTop}>
@@ -77,7 +102,14 @@ const OwnerBookingsScreen = () => {
               <Text style={styles.avatarText}>{(item.userId?.name || 'C').charAt(0).toUpperCase()}</Text>
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.customerName} numberOfLines={1}>{item.userId?.name || 'Customer'}</Text>
+              <View style={styles.iconTextRow}>
+                <Text style={[styles.customerName, { flexShrink: 1 }]} numberOfLines={1}>{item.userId?.name || 'Customer'}</Text>
+                {item.userId?.noShowCount > 0 && (
+                  <View style={styles.noShowBadge}>
+                    <Text style={styles.noShowBadgeText}>{item.userId.noShowCount} no-show{item.userId.noShowCount > 1 ? 's' : ''}</Text>
+                  </View>
+                )}
+              </View>
               <View style={styles.iconTextRow}>
                 <Ionicons name="call-outline" size={11} color={COLORS.textSecondary} />
                 <Text style={styles.customerPhone}>{item.userId?.phone}</Text>
@@ -86,8 +118,8 @@ const OwnerBookingsScreen = () => {
           </View>
           <View style={[styles.timeBox, isToday && styles.timeBoxToday]}>
             {isToday && <Text style={styles.todayTag}>TODAY</Text>}
-            <Text style={styles.timeText}>{item.slotTime}</Text>
-            <Text style={styles.dateText}>{item.slotDate}</Text>
+            <Text style={styles.timeText}>{formatTime12h(item.slotTime)}</Text>
+            <Text style={styles.dateText}>{formatSlotDate(item.slotDate)}</Text>
           </View>
         </View>
 
@@ -156,8 +188,15 @@ const OwnerBookingsScreen = () => {
                   </>
               }
             </TouchableOpacity>
+
+            {now >= slotStartMs && (
+              <Text style={styles.awaitingText}>
+                {awaitingArrival ? `Awaiting arrival · No-Show available in ${graceMinsLeft} min` : 'Grace period over · you can mark No-Show'}
+              </Text>
+            )}
+
             <View style={styles.secondaryRow}>
-              <TouchableOpacity style={styles.iconTextRow} onPress={() => updateStatus(item._id, 'no_show')} disabled={updatingId === item._id}>
+              <TouchableOpacity style={[styles.iconTextRow, !graceOver && styles.btnDisabled]} onPress={() => updateStatus(item._id, 'no_show')} disabled={updatingId === item._id || !graceOver}>
                 <Ionicons name="warning-outline" size={13} color={COLORS.warning} />
                 <Text style={styles.secondaryLinkWarn}>No-Show</Text>
               </TouchableOpacity>
@@ -238,7 +277,7 @@ const OwnerBookingsScreen = () => {
         <FlatList
           data={filtered}
           keyExtractor={item => item._id}
-          renderItem={({ item }) => <BookingCard item={item} />}
+          renderItem={({ item }) => BookingCard({ item })}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
         />
@@ -303,6 +342,10 @@ const styles = StyleSheet.create({
   retryBtn:      { marginTop: SPACING.lg, paddingHorizontal: SPACING.xl, paddingVertical: SPACING.sm, borderRadius: RADIUS.md, backgroundColor: COLORS.accent },
   retryBtnText:  { color: COLORS.white, fontWeight: '600', fontSize: FONTS.sizes.sm },
   btnDisabled:   { opacity: 0.5 },
+
+  noShowBadge:     { backgroundColor: COLORS.warning + '25', borderRadius: RADIUS.full, paddingHorizontal: 6, paddingVertical: 1 },
+  noShowBadgeText: { color: COLORS.textPrimary, fontSize: 10, fontWeight: '700' },
+  awaitingText:    { color: COLORS.textSecondary, fontSize: FONTS.sizes.xs, textAlign: 'center', marginTop: 2 },
 });
 
 export default OwnerBookingsScreen;
