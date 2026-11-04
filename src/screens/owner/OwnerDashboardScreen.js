@@ -6,10 +6,10 @@ import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity
 import { COLORS, FONTS, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
 import { bookingAPI, shopAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
-import { toLocalYMD, formatTime12h } from '../../utils/time';
+import { toLocalYMD, formatTime12h, formatSlotDate } from '../../utils/time';
 import OwnerSlotGrid from '../../components/OwnerSlotGrid';
 
-const OwnerDashboardScreen = () => {
+const OwnerDashboardScreen = ({ navigation }) => {
   const { user } = useAuth();
   const [shop, setShop]         = useState(null);
   const [bookings, setBookings] = useState([]);
@@ -17,6 +17,7 @@ const OwnerDashboardScreen = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError]       = useState(null);
   const [tick, setTick] = useState(0);
+  const [upcomingPending, setUpcomingPending] = useState(0);
 
   useFocusEffect(
     useCallback(() => {
@@ -33,6 +34,10 @@ const OwnerDashboardScreen = () => {
       const bookingRes = await bookingAPI.getShopBookings(shopData._id, toLocalYMD());
       setBookings(bookingRes.data.data);
       setTick(t => t + 1);
+      try {
+        const s = await bookingAPI.getShopSummary(shopData._id);
+        setUpcomingPending((s.data.data || []).reduce((n, r) => n + (r.pending || 0), 0));
+      } catch (e) { console.log('summary error:', e.message); }
     } catch (err) {
       console.log('fetchData error:', err);
       setError('Failed to load dashboard. Pull down to retry.');
@@ -108,6 +113,18 @@ const OwnerDashboardScreen = () => {
         </View>
         <View style={[styles.statusDot, { backgroundColor: shop?.acceptingBookings ? COLORS.success : COLORS.error }]} />
       </View>
+
+      <Text style={[styles.sectionTitle, { paddingHorizontal: SPACING.lg, marginBottom: SPACING.sm }]}>Today · {formatSlotDate(toLocalYMD())}</Text>
+      {upcomingPending > 0 && (
+        <TouchableOpacity
+          style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginHorizontal: SPACING.lg, marginBottom: SPACING.md, padding: SPACING.sm, borderRadius: RADIUS.md, backgroundColor: COLORS.warning + '20', borderWidth: 1, borderColor: COLORS.warning + '60' }}
+          onPress={() => navigation.navigate('OwnerBookings')}
+          activeOpacity={0.85}
+        >
+          <Ionicons name="alert-circle-outline" size={16} color={COLORS.textPrimary} />
+          <Text style={{ flex: 1, color: COLORS.textPrimary, fontSize: FONTS.sizes.xs, fontWeight: '600' }}>{upcomingPending} pending request{upcomingPending > 1 ? 's' : ''} need your response · Open Bookings</Text>
+        </TouchableOpacity>
+      )}
 
       {/* Stats */}
       <View style={styles.statsGrid}>
