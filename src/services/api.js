@@ -81,6 +81,7 @@ export const bookingAPI = {
   cancel:     (id, reason) => api.put(`/bookings/${id}/cancel`, { reason }),
   reschedule: (id, slotDate, slotTime, extra = {}) => api.put(`/bookings/${id}/reschedule`, { slotDate, slotTime, ...extra }),
   getShopBookings: (shopId, date) => api.get(`/bookings/shop/${shopId}${date ? `?date=${date}` : ''}`),
+  getShopSummary: (shopId) => api.get(`/bookings/shop/${shopId}`, { params: { summary: 1 } }),  
   updateStatus:    (id, status) => api.put(`/bookings/${id}/status`, { status }),
 };
 
