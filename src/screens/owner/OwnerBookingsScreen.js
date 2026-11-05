@@ -111,7 +111,7 @@ const OwnerBookingsScreen = () => {
     ]);
   };
 
-  const filtered = bookings.filter(b => b.status === filter);
+  const filtered = filter === 'all' ? bookings : bookings.filter(b => b.status === filter);
 
   const counts = ['pending', 'confirmed', 'completed', 'cancelled', 'no_show'].reduce((acc, f) => {
     acc[f] = bookings.filter(b => b.status === f).length;
@@ -313,14 +313,14 @@ const OwnerBookingsScreen = () => {
         <View style={styles.center}>
           <Ionicons name="alert-circle-outline" size={48} color={COLORS.error} />
           <Text style={styles.emptyText}>{error}</Text>
-          <TouchableOpacity style={styles.retryBtn} onPress={fetchShopAndBookings} activeOpacity={0.85}>
+          <TouchableOpacity style={styles.retryBtn} onPress={() => { setLoading(true); fetchShopAndBookings(); }} activeOpacity={0.85}>
             <Text style={styles.retryBtnText}>Retry</Text>
           </TouchableOpacity>
         </View>
       ) : filtered.length === 0 ? (
         <View style={styles.center}>
           <Ionicons name="calendar-outline" size={48} color={COLORS.textMuted} />
-          <Text style={styles.emptyText}>No {filter} bookings</Text>
+          <Text style={styles.emptyText}>{filter === 'all' ? 'No bookings on this day' : `No ${filter === 'no_show' ? 'no-show' : filter} bookings`}</Text>
         </View>
       ) : (
         <FlatList
