@@ -19,6 +19,9 @@ const Button = ({
       onPress={onPress}
       disabled={disabled || loading}
       activeOpacity={0.8}
+      accessibilityRole="button"
+      accessibilityLabel={title}
+      accessibilityState={{ disabled: disabled || loading, busy: loading }}
       style={[
         styles.base,
         styles[size],
@@ -29,7 +32,7 @@ const Button = ({
       ]}
     >
       {loading
-        ? <ActivityIndicator color={isOutline ? COLORS.accent : COLORS.white} />
+        ? <ActivityIndicator color={isOutline || isGhost ? COLORS.accent : COLORS.white} />
         : <Text style={[styles.text, isOutline && styles.textOutline, isGhost && styles.textGhost]}>
             {title}
           </Text>
