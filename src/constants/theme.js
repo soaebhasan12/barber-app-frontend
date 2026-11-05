@@ -70,7 +70,7 @@ export const SHADOWS = {
     elevation: 6,
   },
   large: {
-    shadowColor: '#C87A63',   // updated from old accent #E94560
+    shadowColor: '#E8875A',   // accent
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 12,
