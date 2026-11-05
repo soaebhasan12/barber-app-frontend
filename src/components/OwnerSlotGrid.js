@@ -15,11 +15,12 @@ const OwnerSlotGrid = ({ shopId, refreshKey }) => {
   const [bookingsByTime, setBookingsByTime] = useState({});
   const [selected, setSelected] = useState(null);
   const reqRef = useRef(0);
+  const dateScroll = useRef(null);
 
   const dates = Array.from({ length: 7 }, (_, i) => {
     const d = new Date();
-    d.setDate(d.getDate() + i);
-    return { date: toLocalYMD(d), day: DAY_NAMES[d.getDay()], num: d.getDate() };
+    d.setDate(d.getDate() + i - 3);
+    return { date: toLocalYMD(d), day: i === 3 ? 'Today' : DAY_NAMES[d.getDay()], num: d.getDate() };
   });
 
   useEffect(() => {
@@ -30,11 +31,11 @@ const OwnerSlotGrid = ({ shopId, refreshKey }) => {
       setError(null);
       try {
         const [slotRes, bookRes] = await Promise.all([
-          bookingAPI.getSlots(shopId, date),
+          date < toLocalYMD() ? Promise.resolve(null) : bookingAPI.getSlots(shopId, date),
           bookingAPI.getShopBookings(shopId, date),
         ]);
         if (id !== reqRef.current) return;
-        const slots = slotRes.data.data || [];
+        const slots = slotRes?.data?.data || [];
         const active = (bookRes.data.data || []).filter(b => ACTIVE.includes(b.status));
         const byTime = {};
         active.forEach(b => { (byTime[b.slotTime] = byTime[b.slotTime] || []).push(b); });
@@ -68,7 +69,7 @@ const OwnerSlotGrid = ({ shopId, refreshKey }) => {
   return (
     <View style={styles.wrap}>
       <Text style={styles.title}>Slot Overview</Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} nestedScrollEnabled style={{ marginBottom: SPACING.md }}>
+      <ScrollView ref={dateScroll} onContentSizeChange={() => dateScroll.current?.scrollTo({ x: 60, animated: false })} horizontal showsHorizontalScrollIndicator={false} nestedScrollEnabled style={{ marginBottom: SPACING.md }}>
         {dates.map(d => (
           <TouchableOpacity key={d.date} style={[styles.dateCard, date === d.date && styles.dateCardActive]} onPress={() => setDate(d.date)}>
             <Text style={[styles.dateDay, date === d.date && styles.dateTextActive]}>{d.day}</Text>
@@ -82,7 +83,7 @@ const OwnerSlotGrid = ({ shopId, refreshKey }) => {
       ) : error ? (
         <Text style={styles.hint}>{error}</Text>
       ) : rows.length === 0 ? (
-        <Text style={styles.hint}>No slots on this day. The shop may be closed.</Text>
+        <Text style={styles.hint}>{date < toLocalYMD() ? 'No bookings on this day.' : 'No slots on this day. The shop may be closed.'}</Text>
       ) : (
         <>
           <View style={styles.statRow}>
