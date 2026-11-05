@@ -32,6 +32,7 @@ const Input = ({
           keyboardType={keyboardType}
           secureTextEntry={secureTextEntry}
           maxLength={maxLength}
+          accessibilityLabel={label || placeholder}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
           style={styles.input}
