@@ -26,7 +26,7 @@
         "expo-notifications",
         {
           "icon": "./assets/icon.png",
-          "color": "#E94560"
+          "color": "#E8875A"
         }
       ],
       "expo-status-bar",
