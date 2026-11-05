@@ -105,10 +105,10 @@ const BookingScreen = () => {
 
   const getDates = () => {
     const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    return Array.from({ length: 7 }, (_, i) => {
+    return Array.from({ length: 4 }, (_, i) => {
       const d = new Date();
       d.setDate(d.getDate() + i);
-      return { date: toLocalYMD(d), day: days[d.getDay()], num: d.getDate() };
+      return { date: toLocalYMD(d), day: i === 0 ? 'Today' : days[d.getDay()], num: d.getDate() };
     });
   };
 
