@@ -15,7 +15,7 @@ const ProfileScreen = () => {
 
   const handleSaveName = async () => {
     const trimmedName = nameInput.trim();
-    if (!trimmedName) return Alert.alert('Error', 'Name cannot be empty');
+    if (trimmedName.length < 2) return Alert.alert('Error', 'Name must be at least 2 characters');
     if (trimmedName.length > MAX_NAME_LENGTH) {
       return Alert.alert('Error', `Name must be under ${MAX_NAME_LENGTH} characters`);
     }
@@ -25,6 +25,7 @@ const ProfileScreen = () => {
       await updateUser(res.data.data);
       setEditModal(false);
     } catch (err) {
+      console.log('updateProfile error:', err);
       Alert.alert('Error', err.response?.data?.message || 'Failed to update profile');
     } finally {
       setSaving(false);
@@ -70,6 +71,7 @@ const ProfileScreen = () => {
             activeOpacity={0.8}
             accessibilityRole="button"
             accessibilityLabel="Edit name"
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
             <Ionicons name="pencil" size={13} color={COLORS.white} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />
           </TouchableOpacity>
@@ -116,10 +118,13 @@ const ProfileScreen = () => {
               placeholder="Your name"
               placeholderTextColor={COLORS.textMuted}
               maxLength={MAX_NAME_LENGTH}
+              autoCapitalize="words"
+              returnKeyType="done"
+              onSubmitEditing={handleSaveName}
               accessibilityLabel="Name input"
             />
             <View style={styles.modalBtns}>
-              <TouchableOpacity style={[styles.modalBtn, { borderColor: COLORS.border }]} onPress={() => setEditModal(false)}>
+              <TouchableOpacity style={[styles.modalBtn, { borderColor: COLORS.border }]} onPress={() => setEditModal(false)} disabled={saving}>
                 <Text style={{ color: COLORS.textSecondary }}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[styles.modalBtn, { backgroundColor: COLORS.accent }]} onPress={handleSaveName} disabled={saving}>
