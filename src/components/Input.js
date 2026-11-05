@@ -44,6 +44,7 @@ const Input = ({
   );
 };
 
+
 const styles = StyleSheet.create({
   wrapper:        { marginBottom: SPACING.md },
   label:          { color: COLORS.textSecondary, fontSize: FONTS.sizes.sm, marginBottom: SPACING.xs, fontWeight: '500' },
