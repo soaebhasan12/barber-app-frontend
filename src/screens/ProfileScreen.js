@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Alert, Modal, TextInput, Acti
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONTS, SPACING, RADIUS, SHADOWS } from '../constants/theme';
 import { useAuth } from '../context/AuthContext';
-import { authAPI } from '../services/api';
+import { authAPI, getApiError } from '../services/api';
 
 const MAX_NAME_LENGTH = 50;
 
@@ -12,6 +12,10 @@ const ProfileScreen = () => {
   const [editModal, setEditModal] = useState(false);
   const [nameInput, setNameInput] = useState(user?.name || '');
   const [saving, setSaving] = useState(false);
+  const [delModal, setDelModal] = useState(false);
+  const [delStep, setDelStep] = useState('warn'); // warn | otp
+  const [delOtp, setDelOtp] = useState('');
+  const [delBusy, setDelBusy] = useState(false);
 
   const handleSaveName = async () => {
     const trimmedName = nameInput.trim();
@@ -37,6 +41,38 @@ const ProfileScreen = () => {
       { text: 'Cancel', style: 'cancel' },
       { text: 'Logout', style: 'destructive', onPress: logout },
     ]);
+  };
+
+  const openDelete = () => { setDelStep('warn'); setDelOtp(''); setDelModal(true); };
+
+  const sendDeleteOtp = async () => {
+    if (delBusy) return;
+    setDelBusy(true);
+    try {
+      await authAPI.requestDeleteOtp();
+      setDelStep('otp');
+    } catch (err) {
+      console.log('requestDeleteOtp error:', err);
+      Alert.alert('Cannot delete account', getApiError(err, 'Could not send OTP.').message);
+    } finally {
+      setDelBusy(false);
+    }
+  };
+
+  const confirmDelete = async () => {
+    if (delBusy || delOtp.length !== 6) return;
+    setDelBusy(true);
+    try {
+      await authAPI.deleteAccount(delOtp);
+      setDelModal(false);
+      Alert.alert('Account deleted', 'Your account has been deleted.');
+      await logout(true); // token ab invalid hai, server call skip
+    } catch (err) {
+      console.log('deleteAccount error:', err);
+      Alert.alert('Error', getApiError(err, 'Could not delete account.').message);
+    } finally {
+      setDelBusy(false);
+    }
   };
 
   const InfoRow = ({ icon, label, value }) => (
@@ -104,6 +140,10 @@ const ProfileScreen = () => {
         <Text style={styles.logoutText}>Logout</Text>
       </TouchableOpacity>
 
+      <TouchableOpacity style={styles.deleteLink} onPress={openDelete} accessibilityRole="button" accessibilityLabel="Delete account">
+        <Text style={styles.deleteLinkText}>Delete Account</Text>
+      </TouchableOpacity>
+
       <Modal visible={editModal} transparent animationType="slide">
         <KeyboardAvoidingView
           style={styles.modalOverlay}
@@ -129,6 +169,49 @@ const ProfileScreen = () => {
               </TouchableOpacity>
               <TouchableOpacity style={[styles.modalBtn, { backgroundColor: COLORS.accent }]} onPress={handleSaveName} disabled={saving}>
                 {saving ? <ActivityIndicator color={COLORS.white} /> : <Text style={{ color: COLORS.white, fontWeight: '600' }}>Save</Text>}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      <Modal visible={delModal} transparent animationType="slide" onRequestClose={() => !delBusy && setDelModal(false)}>
+        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Delete Account</Text>
+            {delStep === 'warn' ? (
+              <Text style={styles.delText}>
+                This permanently deletes your account and personal details. It cannot be undone.{'\n\n'}
+                Cancel any upcoming bookings first. Payment records are kept for legal and refund purposes.
+                {user?.role === 'owner' ? '\n\nYour shop will be removed from the app.' : ''}
+              </Text>
+            ) : (
+              <>
+                <Text style={styles.delText}>Enter the 6-digit OTP sent to {user?.email}</Text>
+                <TextInput
+                  style={styles.modalInput}
+                  value={delOtp}
+                  onChangeText={t => setDelOtp(t.replace(/\D/g, ''))}
+                  keyboardType="number-pad"
+                  maxLength={6}
+                  placeholder="000000"
+                  placeholderTextColor={COLORS.textMuted}
+                  accessibilityLabel="Deletion OTP"
+                />
+              </>
+            )}
+            <View style={styles.modalBtns}>
+              <TouchableOpacity style={[styles.modalBtn, { borderColor: COLORS.border }]} onPress={() => setDelModal(false)} disabled={delBusy}>
+                <Text style={{ color: COLORS.textSecondary }}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalBtn, { backgroundColor: COLORS.error, borderColor: COLORS.error }, delStep === 'otp' && delOtp.length !== 6 && { opacity: 0.5 }]}
+                onPress={delStep === 'warn' ? sendDeleteOtp : confirmDelete}
+                disabled={delBusy || (delStep === 'otp' && delOtp.length !== 6)}
+              >
+                {delBusy
+                  ? <ActivityIndicator color={COLORS.white} />
+                  : <Text style={{ color: COLORS.white, fontWeight: '600' }}>{delStep === 'warn' ? 'Send OTP' : 'Delete permanently'}</Text>}
               </TouchableOpacity>
             </View>
           </View>
@@ -181,6 +264,9 @@ const styles = StyleSheet.create({
 
   logoutBtn:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginHorizontal: SPACING.lg, marginTop: SPACING.lg, padding: SPACING.md, borderRadius: RADIUS.md, borderWidth: 1.5, borderColor: COLORS.error },
   logoutText: { color: COLORS.error, fontWeight: '600', fontSize: FONTS.sizes.md },
+  deleteLink:     { alignItems: 'center', marginTop: SPACING.md, padding: SPACING.sm },
+  deleteLinkText: { color: COLORS.textMuted, fontSize: FONTS.sizes.sm, textDecorationLine: 'underline' },
+  delText:        { color: COLORS.textSecondary, fontSize: FONTS.sizes.sm, lineHeight: 20, marginBottom: SPACING.lg },
 });
 
 export default ProfileScreen;
