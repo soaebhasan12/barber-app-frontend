@@ -32,6 +32,7 @@ const ShopDetailScreen = ({ route, navigation }) => {
   const [bannerIndex, setBannerIndex] = useState(0);
   const submittingRef = useRef(false); // setState async hota hai, double-tap ke liye ref
   const slotReqRef = useRef(0);        // sirf sabse naye slots request ka jawab dikhao
+  const autoAdvancedRef = useRef(false); // aaj ke slots khatam hon to pehli baar kal par le jao
 
   useEffect(() => { fetchInitialData(); refreshUser?.(); }, []); // refreshUser: payAtShopBlocked fresh rakhne ke liye
   useEffect(() => { fetchSlots(); }, [selectedDate, selectedStaff]);
@@ -72,7 +73,15 @@ const ShopDetailScreen = ({ route, navigation }) => {
     try {
       const res = await bookingAPI.getSlots(shop._id, selectedDate, selectedStaff?._id);
       if (reqId !== slotReqRef.current) return;
-      setSlots(res.data.data || []);
+      const list = res.data.data || [];
+      if (list.length === 0 && selectedDate === toLocalYMD() && !autoAdvancedRef.current) {
+        autoAdvancedRef.current = true;
+        const next = new Date();
+        next.setDate(next.getDate() + 1);
+        setSelectedDate(toLocalYMD(next));
+        return;
+      }
+      setSlots(list);
     } catch (err) {
       if (reqId !== slotReqRef.current) return;
       console.log('fetchSlots error:', err);
