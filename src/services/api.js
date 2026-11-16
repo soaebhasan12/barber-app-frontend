@@ -63,6 +63,8 @@ export const authAPI = {
   updateProfile: (name) => api.put('/auth/update-profile', { name }),
   updateFcmToken: (fcmToken) => api.put('/auth/update-fcm', { fcmToken }),
   clearFcmToken: () => api.put('/auth/clear-fcm'),
+  requestDeleteOtp: () => api.post('/auth/delete-account/request-otp'),
+  deleteAccount: (otp) => api.post('/auth/delete-account', { otp }),
 };
 
 export const shopAPI = {
