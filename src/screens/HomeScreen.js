@@ -58,7 +58,7 @@ const HomeScreen = ({ navigation }) => {
 
     if (category && category !== 'All' && category !== 'Nearby') {
       const categoryKey = category.toLowerCase();
-      result = result.filter(s => s.category === categoryKey);
+      result = result.filter(s => s.category === categoryKey || (s.category === 'unisex' && (categoryKey === 'men' || categoryKey === 'women')));
     }
 
     if (query) {
@@ -120,6 +120,9 @@ const HomeScreen = ({ navigation }) => {
         </View>
 
         <Text style={styles.shopAddress} numberOfLines={1}>{shop.address}</Text>
+        {!!shop.openLabel && (
+          <Text style={[styles.openLabel, { color: shop.isOpenNow ? COLORS.success : COLORS.textSecondary }]} numberOfLines={1}>{shop.openLabel}</Text>
+        )}
 
         <View style={styles.shopFooter}>
           <View style={[styles.statusDot, { backgroundColor: shop.acceptingBookings ? COLORS.success : COLORS.error }]} />
@@ -291,6 +294,7 @@ const styles = StyleSheet.create({
   rating:     { color: COLORS.textSecondary, fontSize: FONTS.sizes.sm, fontWeight: '600' },
 
   shopAddress: { color: COLORS.textSecondary, fontSize: FONTS.sizes.sm, marginBottom: SPACING.sm },
+  openLabel:   { fontSize: FONTS.sizes.xs, fontWeight: '600', marginBottom: SPACING.sm, marginTop: -2 },
   shopFooter:  { flexDirection: 'row', alignItems: 'center', gap: SPACING.xs },
   statusDot:   { width: 7, height: 7, borderRadius: 4 },
   statusText:  { fontSize: FONTS.sizes.xs, fontWeight: '600' },
