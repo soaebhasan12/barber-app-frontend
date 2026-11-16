@@ -127,7 +127,7 @@ const HomeScreen = ({ navigation }) => {
         <View style={styles.shopFooter}>
           <View style={[styles.statusDot, { backgroundColor: shop.acceptingBookings ? COLORS.success : COLORS.error }]} />
           <Text style={[styles.statusText, { color: shop.acceptingBookings ? COLORS.success : COLORS.error }]}>
-            {shop.acceptingBookings ? 'Available' : 'Busy'}
+            {shop.acceptingBookings ? 'Accepting bookings' : 'Not accepting bookings'}
           </Text>
           <Text style={styles.reviewCount}>{shop.totalReviews} reviews</Text>
         </View>
