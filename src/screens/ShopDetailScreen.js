@@ -305,7 +305,7 @@ const ShopDetailScreen = ({ route, navigation }) => {
               <Text style={styles.metaDot}>•</Text>
               <View style={[styles.statusDot, { backgroundColor: shop.acceptingBookings ? COLORS.success : COLORS.error }]} />
               <Text style={[styles.metaText, { color: shop.acceptingBookings ? COLORS.success : COLORS.error }]}>
-                {shop.acceptingBookings ? 'Available' : 'Busy'}
+                {shop.acceptingBookings ? 'Accepting bookings' : 'Not Accepting Bookings'}
               </Text>
             </View>
           </View>
