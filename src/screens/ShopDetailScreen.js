@@ -240,7 +240,7 @@ const ShopDetailScreen = ({ route, navigation }) => {
 
   const emptySlotsMessage = selectedDate === today
     ? 'No slots left today. Try another date.'
-    : 'No slots available on this day. The shop may be closed.';
+    : 'No Slots Available On This Day. The shop may be closed.';
 
   if (loading) return (
     <View style={styles.loadingContainer}>
@@ -301,13 +301,15 @@ const ShopDetailScreen = ({ route, navigation }) => {
                 <Text style={styles.metaText}>{shop.rating > 0 ? shop.rating : 'New'}</Text>
               </View>
               <Text style={styles.metaDot}>•</Text>
-              <Text style={styles.metaText}>{shop.totalReviews} reviews</Text>
+              <TouchableOpacity onPress={() => navigation.navigate('ShopReviews', { shopId: shop._id, shopName: shop.name, rating: shop.rating, totalReviews: shop.totalReviews })} accessibilityRole="button" accessibilityLabel="View All Reviews">
+                <Text style={[styles.metaText, { textDecorationLine: 'underline' }]}>{shop.totalReviews} Reviews</Text>
+              </TouchableOpacity>
               <Text style={styles.metaDot}>•</Text>
               {(!shop.acceptingBookings || !!shop.openLabel) && (
                 <>
                   <View style={[styles.statusDot, { backgroundColor: !shop.acceptingBookings ? COLORS.error : shop.isOpenNow ? COLORS.success : COLORS.warning }]} />
                   <Text style={[styles.metaText, { color: !shop.acceptingBookings ? COLORS.error : shop.isOpenNow ? COLORS.success : COLORS.white }]}>
-                    {!shop.acceptingBookings ? 'Not accepting bookings' : shop.openLabel}
+                    {!shop.acceptingBookings ? 'Not Accepting Bookings' : shop.openLabel}
                   </Text>
                 </>
               )}
