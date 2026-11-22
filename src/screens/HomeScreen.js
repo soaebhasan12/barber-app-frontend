@@ -120,15 +120,17 @@ const HomeScreen = ({ navigation }) => {
         </View>
 
         <Text style={styles.shopAddress} numberOfLines={1}>{shop.address}</Text>
-        {!!shop.openLabel && (
+        {!!shop.openLabel && shop.acceptingBookings && (
           <Text style={[styles.openLabel, { color: shop.isOpenNow ? COLORS.success : COLORS.textSecondary }]} numberOfLines={1}>{shop.openLabel}</Text>
         )}
 
         <View style={styles.shopFooter}>
-          <View style={[styles.statusDot, { backgroundColor: shop.acceptingBookings ? COLORS.success : COLORS.error }]} />
-          <Text style={[styles.statusText, { color: shop.acceptingBookings ? COLORS.success : COLORS.error }]}>
-            {shop.acceptingBookings ? 'Accepting bookings' : 'Not Accepting Bookings'}
-          </Text>
+          {!shop.acceptingBookings && (
+            <>
+              <View style={[styles.statusDot, { backgroundColor: COLORS.error }]} />
+              <Text style={[styles.statusText, { color: COLORS.error }]}>Not accepting bookings</Text>
+            </>
+          )}
           <Text style={styles.reviewCount}>{shop.totalReviews} reviews</Text>
         </View>
       </View>
