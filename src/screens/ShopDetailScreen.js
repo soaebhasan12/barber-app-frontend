@@ -303,10 +303,14 @@ const ShopDetailScreen = ({ route, navigation }) => {
               <Text style={styles.metaDot}>•</Text>
               <Text style={styles.metaText}>{shop.totalReviews} reviews</Text>
               <Text style={styles.metaDot}>•</Text>
-              <View style={[styles.statusDot, { backgroundColor: shop.acceptingBookings ? COLORS.success : COLORS.error }]} />
-              <Text style={[styles.metaText, { color: shop.acceptingBookings ? COLORS.success : COLORS.error }]}>
-                {shop.acceptingBookings ? 'Accepting bookings' : 'Not Accepting Bookings'}
-              </Text>
+              {(!shop.acceptingBookings || !!shop.openLabel) && (
+                <>
+                  <View style={[styles.statusDot, { backgroundColor: !shop.acceptingBookings ? COLORS.error : shop.isOpenNow ? COLORS.success : COLORS.warning }]} />
+                  <Text style={[styles.metaText, { color: !shop.acceptingBookings ? COLORS.error : shop.isOpenNow ? COLORS.success : COLORS.white }]}>
+                    {!shop.acceptingBookings ? 'Not accepting bookings' : shop.openLabel}
+                  </Text>
+                </>
+              )}
             </View>
           </View>
         </View>
@@ -601,7 +605,7 @@ const styles = StyleSheet.create({
   bannerOverlay: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: SPACING.md, backgroundColor: 'rgba(0,0,0,0.65)' },
   bannerName:    { color: COLORS.white, fontSize: FONTS.sizes.lg, fontWeight: '700' },
   bannerAddress: { color: COLORS.white, fontSize: FONTS.sizes.xs, marginTop: 2 },
-  bannerMeta:    { flexDirection: 'row', alignItems: 'center', gap: SPACING.xs, marginTop: 4 },
+  bannerMeta:    { flexDirection: 'row', alignItems: 'center', gap: SPACING.xs, marginTop: 4, flexWrap: 'wrap' },
   metaText:      { color: COLORS.white, fontSize: FONTS.sizes.xs },
   metaDot:       { color: COLORS.white },
   statusDot:     { width: 6, height: 6, borderRadius: 3 },
