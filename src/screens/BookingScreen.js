@@ -8,6 +8,7 @@ import { bookingAPI, reviewAPI, getApiError } from '../services/api';
 import { formatTime12h, formatSlotDate, toLocalYMD } from '../utils/time';
 import { startPayment } from '../services/payment';
 import { useAuth } from '../context/AuthContext';
+import { titleCase } from '../utils/text';
 
 const MAX_COMMENT_LENGTH = 500;
 
@@ -376,7 +377,7 @@ const BookingScreen = () => {
           {awaiting && (
             <View style={styles.payBox}>
               <View style={{ flex: 1 }}>
-                <Text style={styles.payBoxTitle}>Payment pending</Text>
+                <Text style={styles.payBoxTitle}>Payment Pending</Text>
                 <PayCountdown deadline={item.paymentDeadline} onExpire={fetchBookings} />
               </View>
               <TouchableOpacity
@@ -393,8 +394,8 @@ const BookingScreen = () => {
           {canPayOnline && (
             <View style={styles.payBox}>
               <View style={{ flex: 1 }}>
-                <Text style={styles.payBoxTitle}>Pay at shop</Text>
-                <Text style={styles.countdownText}>Pay online to guarantee your slot</Text>
+                <Text style={styles.payBoxTitle}>Pay At Shop</Text>
+                <Text style={styles.countdownText}>Pay Online To Guarantee Your Slot</Text>
               </View>
               <TouchableOpacity style={styles.payBtn} onPress={() => handlePayNow(item)} disabled={payingId === item._id} accessibilityRole="button">
                 <Text style={styles.payBtnText}>{payingId === item._id ? 'Opening...' : `Pay ₹${item.amount}`}</Text>
@@ -404,7 +405,7 @@ const BookingScreen = () => {
 
           {(item.status === 'pending' || item.status === 'confirmed') && (
             slotPassed ? (
-              <Text style={styles.passedText}>This slot time has passed. Please contact the shop if you still want to be served.</Text>
+              <Text style={styles.passedText}>This Slot Time Has Passed. Please Contact The Shop If You Still Want To Be Served.</Text>
             ) : (
               <View style={{ flexDirection: 'row', gap: SPACING.sm, marginTop: SPACING.sm }}>
                 <TouchableOpacity style={[styles.cancelBtn, { flex: 1, marginTop: 0 }]} onPress={() => handleCancel(item)} disabled={cancellingId === item._id}>
@@ -467,8 +468,8 @@ const BookingScreen = () => {
       {fetchError && bookings.length === 0 ? (
         <View style={styles.center}>
           <Ionicons name="cloud-offline-outline" size={48} color={COLORS.textMuted} />
-          <Text style={styles.emptyText}>Couldn't load bookings</Text>
-          <Text style={styles.emptySubtext}>{fetchError}</Text>
+          <Text style={styles.emptyText}>Couldn't Load Bookings</Text>
+          <Text style={styles.emptySubtext}>{titleCase(fetchError)}</Text>
           <TouchableOpacity
             style={[styles.rescheduleBtn, { marginTop: SPACING.md, paddingHorizontal: SPACING.lg }]}
             onPress={() => { setLoading(true); fetchBookings(); }}
@@ -483,8 +484,8 @@ const BookingScreen = () => {
       ) : bookings.length === 0 ? (
         <View style={styles.center}>
           <Ionicons name="calendar-outline" size={48} color={COLORS.textMuted} />
-          <Text style={styles.emptyText}>{tab === 'Upcoming' ? 'No Upcoming Bookings' : 'No Past Bookings'}</Text>
-          <Text style={styles.emptySubtext}>Book a service to get started</Text>
+          <Text style={styles.emptyText}>{tab === 'upcoming' ? 'No Upcoming Bookings' : 'No Past Bookings'}}</Text>
+          <Text style={styles.emptySubtext}>Book A Service To Get Started</Text>
         </View>
       ) : (
         <FlatList
@@ -502,7 +503,7 @@ const BookingScreen = () => {
       <Modal visible={reviewModal} transparent animationType="slide">
         <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Rate your experience</Text>
+            <Text style={styles.modalTitle}>Rate Your Experience</Text>
             <Text style={styles.modalShop}>{selectedBooking?.shopId?.name}</Text>
             <View style={styles.starsRow}>
               {[1,2,3,4,5].map(star => (
@@ -519,7 +520,7 @@ const BookingScreen = () => {
             </View>
             <TextInput
               style={styles.commentInput}
-              placeholder="Share your experience..."
+              placeholder="Share Your Experience..."
               placeholderTextColor={COLORS.textMuted}
               value={comment}
               onChangeText={setComment}
@@ -564,7 +565,7 @@ const BookingScreen = () => {
             {slotsLoading ? (
               <ActivityIndicator color={COLORS.accent} style={{ marginVertical: SPACING.lg }} />
             ) : slots.length === 0 ? (
-              <Text style={{ color: COLORS.textMuted, marginBottom: SPACING.lg }}>No slots available on this day</Text>
+              <Text style={{ color: COLORS.textMuted, marginBottom: SPACING.lg }}>No Slots Available On This Day</Text>
             ) : (
               <View style={styles.slotsGrid}>
                 {slots.map(slot => (
