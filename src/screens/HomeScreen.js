@@ -128,10 +128,10 @@ const HomeScreen = ({ navigation }) => {
           {!shop.acceptingBookings && (
             <>
               <View style={[styles.statusDot, { backgroundColor: COLORS.error }]} />
-              <Text style={[styles.statusText, { color: COLORS.error }]}>Not accepting bookings</Text>
+              <Text style={[styles.statusText, { color: COLORS.error }]}>Not Accepting Bookings</Text>
             </>
           )}
-          <Text style={styles.reviewCount}>{shop.totalReviews} reviews</Text>
+          <Text style={styles.reviewCount}>{shop.totalReviews} Reviews</Text>
         </View>
       </View>
     </TouchableOpacity>
