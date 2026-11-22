@@ -79,7 +79,7 @@ export const shopAPI = {
 export const bookingAPI = {
   getSlots: (shopId, date, staffId) => api.get('/bookings/slots', { params: { shopId, date, ...(staffId ? { staffId } : {}) } }),
   create:     (data) => api.post('/bookings/create', data),
-  getMyBookings: () => api.get('/bookings/my'),
+  getMyBookings: (params) => api.get('/bookings/my', { params }),
   cancel:     (id, reason) => api.put(`/bookings/${id}/cancel`, { reason }),
   reschedule: (id, slotDate, slotTime, extra = {}) => api.put(`/bookings/${id}/reschedule`, { slotDate, slotTime, ...extra }),
   getShopBookings: (shopId, date) => api.get(`/bookings/shop/${shopId}${date ? `?date=${date}` : ''}`),
