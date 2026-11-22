@@ -34,6 +34,13 @@ const PayCountdown = ({ deadline, onExpire }) => {
 
 const BookingScreen = () => {
   const [bookings, setBookings] = useState([]);
+  const [tab, setTab] = useState('upcoming');
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [tabLoading, setTabLoading] = useState(false);
+  const tabRef = useRef('upcoming');
+  const fetchSeqRef = useRef(0);
   const [loading, setLoading]   = useState(true);
 
   const [reviewModal, setReviewModal] = useState(false);
@@ -61,20 +68,48 @@ const BookingScreen = () => {
     }, [])
   );
 
-  const fetchBookings = async () => {
+  const fetchBookings = async (pageNum = 1, tabName = tabRef.current) => {
+    const seq = ++fetchSeqRef.current; // sirf sabse naye request ka jawab dikhao
     try {
       setFetchError(null);
-      const res = await bookingAPI.getMyBookings();
+      if (pageNum > 1) setLoadingMore(true);
+      const res = await bookingAPI.getMyBookings({ tab: tabName, page: pageNum, limit: 10 });
+      if (seq !== fetchSeqRef.current) return;
       const data = res.data.data || [];
-      setBookings(data);
-      const reviewed = data.filter(b => b.isReviewed).map(b => b._id);
-      setReviewedIds(new Set(reviewed));
+      setBookings(prev => {
+        if (pageNum === 1) return data;
+        const seen = new Set(prev.map(b => b._id));
+        return [...prev, ...data.filter(b => !seen.has(b._id))];
+      });
+      setReviewedIds(prev => {
+        const next = pageNum === 1 ? new Set() : new Set(prev);
+        data.forEach(b => { if (b.isReviewed) next.add(b._id); });
+        return next;
+      });
+      setPage(pageNum);
+      setHasMore(!!res.data.hasMore);
     } catch (err) {
+      if (seq !== fetchSeqRef.current) return;
       console.log('fetchBookings error:', err);
       setFetchError(getApiError(err, 'Could not load your bookings.').message);
     } finally {
-      setLoading(false);
+      if (seq === fetchSeqRef.current) {
+        setLoading(false);
+        setLoadingMore(false);
+        setTabLoading(false);
+      }
     }
+  };
+
+  const switchTab = (t) => {
+    if (t === tabRef.current) return;
+    tabRef.current = t;
+    setTab(t);
+    setBookings([]);
+    setHasMore(false);
+    setPage(1);
+    setTabLoading(true);
+    fetchBookings(1, t);
   };
 
 
@@ -246,18 +281,18 @@ const BookingScreen = () => {
       });
       if (result.status === 'busy') return;
       if (result.status === 'paid') {
-        Alert.alert('Payment successful', 'Your booking is confirmed.');
+        Alert.alert('Payment Successful', 'Your Booking is Confirmed.');
       } else if (result.status === 'verify_pending') {
-        Alert.alert('Payment received', result.message);
+        Alert.alert('Payment Received', result.message);
       } else if (result.status === 'cancelled') {
-        Alert.alert('Payment not completed', result.message);
+        Alert.alert('Payment Not Completed', result.message);
       } else {
-        Alert.alert(['expired', 'slot_taken'].includes(result.status) ? 'Slot not secured' : 'Payment failed', result.message);
+        Alert.alert(['expired', 'slot_taken'].includes(result.status) ? 'Slot Not secured' : 'Payment Failed', result.message);
       }
       fetchBookings();
     } catch (err) {
       console.log('handlePayNow error:', err);
-      Alert.alert('Error', 'Something went wrong. Please try again.');
+      Alert.alert('Error', 'Something Went Wrong. Please Try Again.');
     } finally {
       setPayingId(null);
     }
@@ -421,6 +456,14 @@ const BookingScreen = () => {
         <Text style={styles.title}>My Bookings</Text>
       </View>
 
+      <View style={styles.tabRow}>
+        {[['upcoming', 'Upcoming'], ['past', 'Past']].map(([k, label]) => (
+          <TouchableOpacity key={k} style={[styles.tabBtn, tab === k && styles.tabBtnActive]} onPress={() => switchTab(k)}>
+            <Text style={[styles.tabText, tab === k && styles.tabTextActive]}>{label}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
       {fetchError && bookings.length === 0 ? (
         <View style={styles.center}>
           <Ionicons name="cloud-offline-outline" size={48} color={COLORS.textMuted} />
@@ -433,10 +476,14 @@ const BookingScreen = () => {
             <Text style={styles.rescheduleBtnText}>Retry</Text>
           </TouchableOpacity>
         </View>
+      ) : tabLoading ? (
+        <View style={styles.center}>
+          <ActivityIndicator color={COLORS.accent} size="large" />
+        </View>
       ) : bookings.length === 0 ? (
         <View style={styles.center}>
           <Ionicons name="calendar-outline" size={48} color={COLORS.textMuted} />
-          <Text style={styles.emptyText}>No bookings yet</Text>
+          <Text style={styles.emptyText}>{tab === 'Upcoming' ? 'No Upcoming Bookings' : 'No Past Bookings'}</Text>
           <Text style={styles.emptySubtext}>Book a service to get started</Text>
         </View>
       ) : (
@@ -445,6 +492,9 @@ const BookingScreen = () => {
           keyExtractor={item => item._id}
           renderItem={({ item }) => BookingCard({ item })}
           contentContainerStyle={styles.list}
+          onEndReached={() => { if (hasMore && !loadingMore && !tabLoading) fetchBookings(page + 1); }}
+          onEndReachedThreshold={0.4}
+          ListFooterComponent={loadingMore ? <ActivityIndicator color={COLORS.accent} style={{ marginVertical: SPACING.md }} /> : null}
           showsVerticalScrollIndicator={false}
         />
       )}
@@ -551,6 +601,11 @@ const styles = StyleSheet.create({
   header:      { paddingHorizontal: SPACING.lg, paddingTop: SPACING.xl + 20, paddingBottom: SPACING.md },
   title:       { fontSize: FONTS.sizes.xxl, fontWeight: '700', color: COLORS.textPrimary },
   list:        { padding: SPACING.lg, paddingBottom: 100 },
+  tabRow:        { flexDirection: 'row', marginHorizontal: SPACING.lg, marginBottom: SPACING.sm, backgroundColor: COLORS.card, borderRadius: RADIUS.md, padding: 4 },
+  tabBtn:        { flex: 1, paddingVertical: SPACING.sm, borderRadius: RADIUS.sm, alignItems: 'center' },
+  tabBtnActive:  { backgroundColor: COLORS.accent },
+  tabText:       { color: COLORS.textSecondary, fontWeight: '600', fontSize: FONTS.sizes.sm },
+  tabTextActive: { color: COLORS.white },
 
   card:        { backgroundColor: COLORS.card, borderRadius: RADIUS.lg, padding: SPACING.md, marginBottom: SPACING.md, borderWidth: 1, borderColor: COLORS.border, overflow: 'hidden', ...SHADOWS.small },
   cardHeader:  { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACING.sm },
