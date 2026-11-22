@@ -94,6 +94,7 @@ export const paymentAPI = {
 
 export const reviewAPI = {
   add: (data) => api.post('/reviews/add', data),
+  getByShop: (shopId, params) => api.get(`/reviews/${shopId}`, { params }),
 };
 
 export const serviceAPI = {

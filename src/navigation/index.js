@@ -18,6 +18,7 @@ import OwnerDashboardScreen from '../screens/owner/OwnerDashboardScreen';
 import OwnerBookingsScreen  from '../screens/owner/OwnerBookingsScreen';
 import OwnerShopScreen      from '../screens/owner/OwnerShopScreen';
 import AdminShopsScreen     from '../screens/admin/AdminShopsScreen';
+import ShopReviewsScreen    from '../screens/ShopReviewsScreen';
 
 const Stack = createStackNavigator();
 const Tab   = createBottomTabNavigator();
@@ -147,6 +148,7 @@ const AppNavigator = () => {
           : <>
               <Stack.Screen name="Main" component={user.role === 'owner' ? OwnerTabs : UserTabs} />
               <Stack.Screen name="ShopDetail" component={ShopDetailScreen} />
+              <Stack.Screen name="ShopReviews" component={ShopReviewsScreen} />
             </>
         }
       </Stack.Navigator>
