@@ -43,6 +43,8 @@ const OwnerShopScreen = () => {
   );
 
   const isValidTime = (t) => /^([01]\d|2[0-3]):([0-5]\d)$/.test(t);
+  const [shopHours, setShopHours] = useState([]);
+  const updateShopHour = (i, patch) => setShopHours(prev => prev.map((w, idx) => idx === i ? { ...w, ...patch } : w));
   const isValidPhone = (p) => /^\d{10}$/.test(p);
   
   const [regImages, setRegImages] = useState([]); // local URIs, pre-upload
@@ -108,6 +110,10 @@ const OwnerShopScreen = () => {
       setShop(shopData);
       setServices(res.data.data.services);
       setStaff(res.data.data.staff);
+      setShopHours(DAYS.map((_, d) => {
+        const w = (shopData.workingHours || []).find(x => x.day === d);
+        return { day: d, open: w?.open || '09:00', close: w?.close || '21:00', isClosed: w ? !!w.isClosed : false };
+      }));
       setShopInfo({
         name: shopData.name,
         phone: shopData.phone,
@@ -349,9 +355,16 @@ const OwnerShopScreen = () => {
     if (!Number.isInteger(grace) || grace < 5 || grace > 60) return Alert.alert('Error', 'No-show grace period must be 5 to 60 minutes');
     if (!Number.isInteger(holds) || holds < 1 || holds > 5) return Alert.alert('Error', 'Unpaid holds per slot must be 1 to 5');
 
+    for (const wh of shopHours) {
+      if (wh.isClosed) continue;
+      if (!isValidTime(wh.open) || !isValidTime(wh.close)) return Alert.alert('Error', `Enter valid open/close time for ${DAYS[wh.day]} (HH:MM)`);
+      if (wh.open >= wh.close) return Alert.alert('Error', `${DAYS[wh.day]}: closing time must be after opening time`);
+    }
+    if (shopHours.every(w => w.isClosed)) return Alert.alert('Error', 'At least one day must be open');  
+
     setSavingShopInfo(true);
     try {
-      await shopAPI.update({ ...shopInfo, noShowGraceMin: grace, maxUnpaidHoldsPerSlot: holds });
+      await shopAPI.update({ ...shopInfo, noShowGraceMin: grace, maxUnpaidHoldsPerSlot: holds, workingHours: shopHours });
       fetchData();
       Alert.alert('Success', 'Shop details updated');
     } catch (err) {
@@ -640,6 +653,25 @@ const OwnerShopScreen = () => {
             
             <Input label="No-show grace period (minutes, 5-60)" value={shopInfo.noShowGraceMin} onChangeText={t => setShopInfo({ ...shopInfo, noShowGraceMin: t.replace(/\D/g, '') })} placeholder="e.g. 15" keyboardType="number-pad" maxLength={2} />
             <Input label="Unpaid holds per slot (1-5)" value={shopInfo.maxUnpaidHoldsPerSlot} onChangeText={t => setShopInfo({ ...shopInfo, maxUnpaidHoldsPerSlot: t.replace(/\D/g, '') })} placeholder="e.g. 2" keyboardType="number-pad" maxLength={1} />
+
+            <Text style={[styles.itemMeta, { marginBottom: SPACING.xs, marginTop: SPACING.sm }]}>Working Hours (24-hour, e.g. 21:00)</Text>
+            {shopHours.map((wh, i) => (
+              <View key={wh.day} style={styles.whRow}>
+                <Text style={styles.whDay}>{DAYS[wh.day]}</Text>
+                {wh.isClosed ? (
+                  <Text style={styles.whClosedText}>Closed</Text>
+                ) : (
+                  <>
+                    <Input value={wh.open} onChangeText={t => updateShopHour(i, { open: t.replace(/[^\d:]/g, '') })} placeholder="09:00" maxLength={5} style={styles.whInput} />
+                    <Text style={styles.whDash}>-</Text>
+                    <Input value={wh.close} onChangeText={t => updateShopHour(i, { close: t.replace(/[^\d:]/g, '') })} placeholder="21:00" maxLength={5} style={styles.whInput} />
+                  </>
+                )}
+                <TouchableOpacity onPress={() => updateShopHour(i, { isClosed: !wh.isClosed })}>
+                  <Ionicons name={wh.isClosed ? 'close-circle' : 'checkmark-circle-outline'} size={22} color={wh.isClosed ? COLORS.error : COLORS.success} />
+                </TouchableOpacity>
+              </View>
+            ))}
 
             <Button title="Save Changes" onPress={handleSaveShopInfo} loading={savingShopInfo} />
           </View>
